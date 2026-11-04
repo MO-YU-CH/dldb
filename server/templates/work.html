@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ work.title or work.workno }} — {{ site_name }}{% endblock %}
+{% block description %}{{ (work.circle or '') }} · {{ work.title or work.workno }} — {{ T('tagline') }}{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json" nonce="{{ csp_nonce }}">
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": {{ (work.title or work.workno)|tojson }},
+  "sku": {{ work.workno|tojson }},
+  "brand": { "@type": "Brand", "name": {{ (work.circle or 'DLsite')|tojson }} },
+  "offers": {
+    "@type": "Offer",
+    "price": {{ (work.current_price or 0)|tojson }},
+    "priceCurrency": "JPY",
+    "availability": "https://schema.org/InStock"
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<article class="work">
+  <header class="workhead">
+    <p class="crumb"><a href="{{ url_for('home') }}">{{ T('nav_home') }}</a> / {{ work.workno }}</p>
+    <h1>{{ work.title or work.workno }}</h1>
+    <p class="meta">{{ work.circle or '' }}</p>
+  </header>
+
+  <dl class="pricetable">
+    <div><dt>{{ T('work_current') }}</dt><dd class="big">¥{{ work.current_price|num }}</dd></div>
+    <div><dt>{{ T('work_base') }}</dt><dd>¥{{ work.base_price|num }}</dd></div>
+    <div><dt>{{ T('work_lowest') }}</dt><dd class="good">¥{{ work.min_price|num }}{% if work.min_at %} <span class="dim">({{ work.min_at }})</span>{% endif %}</dd></div>
+    <div><dt>{{ T('work_highest') }}</dt><dd>¥{{ work.max_price|num }}</dd></div>
+    <div><dt>{{ T('work_first_seen') }}</dt><dd>{{ work.first_seen or '-' }}</dd></div>
+    <div><dt>{{ T('work_points') }}</dt><dd>{{ work.points|num }}</dd></div>
+    <div><dt>{{ T('work_updated') }}</dt><dd>{{ work.updated_at or '-' }}</dd></div>
+  </dl>
+
+  {% if chart %}
+  <section class="block">
+    <h2>{{ T('chart_title') }}</h2>
+    {{ chart|safe }}
+    {% if chart_stats %}
+    <p class="dim">{{ chart_stats.first }} → {{ chart_stats.last }} · {{ chart_stats.n }} points</p>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <p class="note">{{ T('coupon_note') }}</p>
+
+  <p><a class="button" href="{{ dl_url }}" rel="noopener nofollow" target="_blank">DLsite</a></p>
+</article>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ T('about_title') }} — {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="hero small">
+  <h1>{{ T('about_title') }}</h1>
+  <p class="lead">{{ T('about_p1') }}</p>
+</section>
+
+<section class="block prose">
+  <p>{{ T('about_p2') }}</p>
+  <p class="note">{{ T('about_disclaimer') }}</p>
+</section>
+
+<section class="stats">
+  <div><span class="n">{{ stats.works|num }}</span><span class="k">{{ T('stat_works') }}</span></div>
+  <div><span class="n">{{ stats.samples|num }}</span><span class="k">{{ T('stat_points') }}</span></div>
+  <div><span class="n">{{ stats.first_day or '-' }}</span><span class="k">{{ T('stat_first') }}</span></div>
+  <div><span class="n">{{ stats.last_day or '-' }}</span><span class="k">{{ T('stat_last') }}</span></div>
+</section>
+
+<p class="dim"><a href="{{ url_for('privacy') }}">Privacy</a></p>
+{% endblock %}

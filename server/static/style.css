@@ -1,0 +1,151 @@
+:root {
+  --bg: #fbfbfa;
+  --panel: #ffffff;
+  --text: #1c1b19;
+  --dim: #6f6c66;
+  --line: #e6e4df;
+  --accent: #b45309;
+  --good: #0f766e;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN",
+    "Microsoft YaHei", "Noto Sans JP", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.wrap { max-width: 900px; margin: 0 auto; padding: 0 20px; }
+
+/* header */
+.top { border-bottom: 1px solid var(--line); background: var(--panel); }
+.top .wrap { display: flex; align-items: center; gap: 18px; height: 58px; }
+.brand { font-weight: 600; letter-spacing: -0.01em; color: var(--text); white-space: nowrap; }
+.mainnav { display: flex; gap: 16px; flex: 1; }
+.mainnav a { color: var(--dim); font-size: 14px; }
+.mainnav a.on, .mainnav a:hover { color: var(--text); }
+
+.langs { position: relative; }
+.langs summary {
+  list-style: none; cursor: pointer; font-size: 13px; color: var(--dim);
+  border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px;
+}
+.langs summary::-webkit-details-marker { display: none; }
+.langs ul {
+  position: absolute; right: 0; top: 34px; z-index: 10;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 6px; margin: 0; list-style: none; min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+.langs li a { display: block; padding: 5px 10px; border-radius: 6px; font-size: 13px; color: var(--text); }
+.langs li a.on { background: #f3f1ec; font-weight: 600; }
+
+/* hero */
+.hero { padding: 44px 0 20px; }
+.hero.small { padding: 28px 0 12px; }
+.hero h1 { font-size: 27px; margin: 0 0 8px; letter-spacing: -0.02em; }
+.lead { margin: 0 0 18px; color: var(--dim); }
+.hint { font-size: 12px; color: var(--dim); margin: 8px 0 0; }
+
+.searchbar { display: flex; gap: 8px; max-width: 560px; }
+.searchbar input {
+  flex: 1; font: inherit; padding: 9px 12px; border: 1px solid var(--line);
+  border-radius: var(--radius); background: var(--panel);
+}
+.searchbar input:focus { outline: 2px solid #f0c98a; outline-offset: -1px; }
+.searchbar button {
+  font: inherit; font-weight: 500; padding: 9px 18px; border-radius: var(--radius);
+  border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer;
+}
+.searchbar button:hover { background: #96460a; }
+
+/* stats */
+.stats {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  margin: 22px 0 30px; padding: 16px; background: var(--panel);
+  border: 1px solid var(--line); border-radius: var(--radius);
+}
+.stats .n { display: block; font-size: 17px; font-weight: 600; }
+.stats .k { display: block; font-size: 12px; color: var(--dim); }
+
+/* lists */
+.block { margin: 28px 0; }
+.block h2 { font-size: 16px; margin: 0 0 12px; }
+.worklist { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.worklist li {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 10px 2px; border-bottom: 1px solid var(--line);
+}
+.worklist li a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.worklist .meta { font-size: 12px; color: var(--dim); white-space: nowrap; }
+.worklist .price { font-variant-numeric: tabular-nums; font-weight: 500; white-space: nowrap; }
+
+/* work page */
+.workhead { padding: 26px 0 6px; }
+.crumb { font-size: 12px; color: var(--dim); margin: 0 0 6px; }
+.workhead h1 { font-size: 22px; margin: 0 0 6px; letter-spacing: -0.01em; }
+.meta { color: var(--dim); font-size: 13px; margin: 0; }
+
+.pricetable {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px;
+  background: var(--line); border: 1px solid var(--line);
+  border-radius: var(--radius); overflow: hidden; margin: 18px 0;
+}
+.pricetable > div { background: var(--panel); padding: 12px 14px; }
+.pricetable dt { font-size: 12px; color: var(--dim); margin: 0 0 2px; }
+.pricetable dd { margin: 0; font-size: 15px; font-variant-numeric: tabular-nums; }
+.pricetable dd.big { font-size: 22px; font-weight: 600; }
+.pricetable dd.good { color: var(--good); }
+
+.price-chart { width: 100%; height: auto; display: block; margin-top: 4px; }
+.price-chart .grid { stroke: #eceae5; stroke-width: 1; }
+.price-chart .tick { font-size: 11px; fill: var(--dim); }
+.price-chart .line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+.price-chart .area { fill: rgba(180, 83, 9, 0.08); }
+.price-chart .dot { fill: var(--accent); }
+
+.note {
+  font-size: 13px; color: var(--dim); background: #f6f4ef;
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px;
+}
+.button {
+  display: inline-block; padding: 8px 16px; border-radius: var(--radius);
+  background: var(--panel); border: 1px solid var(--line); color: var(--text); font-size: 14px;
+}
+.button:hover { border-color: var(--accent); text-decoration: none; }
+
+/* table */
+.ranktable { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ranktable th, .ranktable td { text-align: left; padding: 9px 6px; border-bottom: 1px solid var(--line); }
+.ranktable th { font-size: 12px; color: var(--dim); font-weight: 500; }
+.ranktable .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ranktable .good { color: var(--good); white-space: nowrap; }
+.ranktable .meta { display: block; font-size: 12px; }
+
+/* misc */
+.prose p { margin: 0 0 14px; }
+.prose h2 { font-size: 14px; margin: 22px 0 8px; color: var(--dim); font-weight: 600; }
+.dim { color: var(--dim); font-size: 13px; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--dim); }
+
+.bottom { border-top: 1px solid var(--line); margin-top: 56px; padding: 22px 0 34px; }
+.bottom p { margin: 0 0 6px; font-size: 12px; color: var(--dim); }
+.bottom a { color: var(--dim); }
+
+@media (max-width: 640px) {
+  .top .wrap { height: auto; flex-wrap: wrap; padding: 10px 16px; gap: 10px; }
+  .mainnav { order: 3; width: 100%; gap: 14px; overflow-x: auto; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .pricetable { grid-template-columns: 1fr; }
+  .worklist .meta { display: none; }
+  .hero { padding: 26px 0 12px; }
+  .hero h1 { font-size: 22px; }
+}

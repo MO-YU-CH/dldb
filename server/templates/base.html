@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="{{ locale_meta.html_lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ site_name }}{% endblock %}</title>
+<meta name="description" content="{% block description %}{{ T('tagline') }}{% endblock %}">
+<link rel="canonical" href="{{ base_url }}{{ current_path }}">
+{% for loc in locales -%}
+<link rel="alternate" hreflang="{{ loc.hreflang }}" href="{{ base_url }}{{ alt_url(loc.code) }}">
+{% endfor -%}
+<link rel="alternate" hreflang="x-default" href="{{ base_url }}{{ alt_url('ja-jp') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+{% block head_extra %}{% endblock %}
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="{{ url_for('home') }}">{{ site_name }}</a>
+    <nav class="mainnav">
+      <a href="{{ url_for('home') }}"{% if active == 'home' %} class="on"{% endif %}>{{ T('nav_home') }}</a>
+      <a href="{{ url_for('search') }}"{% if active == 'search' %} class="on"{% endif %}>{{ T('nav_search') }}</a>
+      <a href="{{ url_for('rank') }}"{% if active == 'rank' %} class="on"{% endif %}>{{ T('nav_rank') }}</a>
+      <a href="{{ url_for('about') }}"{% if active == 'about' %} class="on"{% endif %}>{{ T('nav_about') }}</a>
+    </nav>
+    <details class="langs">
+      <summary>{{ locale_meta.label }}</summary>
+      <ul>
+        {% for loc in locales -%}
+        <li><a href="{{ alt_url(loc.code) }}"{% if loc.code == locale %} class="on"{% endif %}>{{ loc.label }}</a></li>
+        {% endfor -%}
+      </ul>
+    </details>
+  </div>
+</header>
+
+<main class="wrap">
+{% block content %}{% endblock %}
+</main>
+
+<footer class="bottom">
+  <div class="wrap">
+    <p>{{ T('footer_note') }}</p>
+    <p class="dim"><a href="{{ url_for('privacy') }}">Privacy</a> · <a href="{{ url_for('about') }}">{{ T('nav_about') }}</a> · © {{ now_year }} {{ site_name }}</p>
+  </div>
+</footer>
+</body>
+</html>

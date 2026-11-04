@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Privacy — {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="hero small">
+  <h1>Privacy</h1>
+</section>
+
+<section class="block prose">
+  <h2>日本語</h2>
+  <p>本サイトにはアカウント機能がなく、氏名・メールアドレス等の入力を求めません。サーバーのアクセスログ（IP アドレス、ユーザーエージェント、リクエスト URL、時刻）を最大 14 日間保持し、障害調査と不正アクセス対策のみに使用します。アクセス解析ツール、広告タグ、トラッキング Cookie は使用していません。</p>
+  <p>ブラウザ拡張機能およびユーザースクリプトは、閲覧した作品の価格記録をブラウザ内にのみ保存し、外部へ送信しません。設定画面からいつでも削除できます。</p>
+
+  <h2>English</h2>
+  <p>This site has no accounts and asks for no personal information. Server access logs (IP address, user agent, request URL, time) are kept for up to 14 days and used only for troubleshooting and abuse prevention. No analytics, ad tags, or tracking cookies are used.</p>
+  <p>The browser extension and userscript store price records only in your browser and never upload them. You can clear them from the settings page at any time.</p>
+
+  <h2>中文</h2>
+  <p>本站无账号系统，不要求填写任何个人信息。服务器访问日志（IP、UA、请求路径、时间）最多保留 14 天，仅用于故障排查与防滥用。不使用访问统计工具、广告标签或跟踪 Cookie。</p>
+  <p>浏览器扩展与油猴脚本仅在本地保存价格记录，不上传；可在设置页随时清空。</p>
+
+  <p class="note">{{ T('about_disclaimer') }}</p>
+</section>
+{% endblock %}

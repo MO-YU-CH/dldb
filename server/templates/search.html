@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ T('nav_search') }} — {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="hero small">
+  <h1>{{ T('nav_search') }}</h1>
+  <form class="searchbar" action="{{ url_for('search') }}" method="get" role="search">
+    <input type="search" name="q" value="{{ q }}" placeholder="{{ T('search_placeholder') }}" aria-label="{{ T('search_placeholder') }}" autocomplete="off">
+    <button type="submit">{{ T('search_button') }}</button>
+  </form>
+</section>
+
+{% if q %}
+  {% if rows %}
+  <p class="dim">{{ T('search_results', q=q, n=rows|length) }}</p>
+  <ul class="worklist">
+    {% for w in rows %}
+    <li>
+      <a href="{{ url_for('work', workno=w.workno) }}">{{ w.title or w.workno }}</a>
+      <span class="meta">{{ w.workno }}{% if w.circle %} · {{ w.circle }}{% endif %}</span>
+      <span class="price">¥{{ w.current_price|num }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="note">{{ T('search_empty') }}</p>
+  {% endif %}
+{% else %}
+  <p class="note">{{ T('search_hint') }}</p>
+{% endif %}
+{% endblock %}

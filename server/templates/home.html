@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ site_name }} — {{ T('tagline') }}{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <h1>{{ site_name }}</h1>
+  <p class="lead">{{ T('tagline') }}</p>
+  <form class="searchbar" action="{{ url_for('search') }}" method="get" role="search">
+    <input type="search" name="q" placeholder="{{ T('search_placeholder') }}" aria-label="{{ T('search_placeholder') }}" autocomplete="off">
+    <button type="submit">{{ T('search_button') }}</button>
+  </form>
+  <p class="hint">{{ T('search_hint') }}</p>
+</section>
+
+<section class="stats">
+  <div><span class="n">{{ stats.works|num }}</span><span class="k">{{ T('stat_works') }}</span></div>
+  <div><span class="n">{{ stats.samples|num }}</span><span class="k">{{ T('stat_points') }}</span></div>
+  <div><span class="n">{{ stats.first_day or '-' }}</span><span class="k">{{ T('stat_first') }}</span></div>
+  <div><span class="n">{{ stats.last_day or '-' }}</span><span class="k">{{ T('stat_last') }}</span></div>
+</section>
+
+{% if latest %}
+<section class="block">
+  <h2>{{ T('latest_title') }}</h2>
+  <ul class="worklist">
+    {% for w in latest %}
+    <li>
+      <a href="{{ url_for('work', workno=w.workno) }}">{{ w.title or w.workno }}</a>
+      <span class="meta">{{ w.circle or '' }}</span>
+      <span class="price">¥{{ w.current_price|num }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

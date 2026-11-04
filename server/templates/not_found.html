@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ T('not_found_title') }} — {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="hero small">
+  <h1>{{ T('not_found_title') }}</h1>
+  {% if workno %}<p class="mono">{{ workno }}</p>{% endif %}
+  <p class="lead">{{ T('not_found_body') }}</p>
+  <p><a class="button" href="{{ url_for('home') }}">{{ T('back_home') }}</a></p>
+</section>
+{% endblock %}
