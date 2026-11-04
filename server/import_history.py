@@ -243,6 +243,8 @@ def stage_resolve(conn, fetcher, limit, workers=3):
             )
             fail += 1
         conn.commit()
+        if (ok + fail) % 50 == 0:
+            print("  … 已解析 %d 件" % (ok + fail), flush=True)
     print("resolve: 成功 %d，失败 %d" % (ok, fail))
     return ok
 
@@ -332,6 +334,8 @@ def stage_fetch(conn, fetcher, limit, workers=3):
         )
         conn.commit()
         ok += 1
+        if ok % 25 == 0:
+            print("  … 已入库 %d 件" % ok, flush=True)
 
     print("fetch: 入库 %d，无数据 %d" % (ok, empty))
     return ok
