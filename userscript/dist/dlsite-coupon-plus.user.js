@@ -2,7 +2,7 @@
 // @name         DLsite Coupon Plus
 // @name:ja      DLsite Coupon Plus 券後価格
 // @namespace    https://dlsite.momo-yu.com/
-// @version      2.0.0
+// @version      2.1.0
 // @description  DLsite 作品页与购物车页显示券后价、价格走势与拆单对比
 // @description:ja  DLsite の作品ページとカートで、クーポン適用後の価格・価格推移・分割購入の比較を表示します
 // @author       momo-yu
@@ -22,7 +22,7 @@
 // @noframes
 // ==/UserScript==
 /*
- * DLsite Coupon Plus v2.0.0
+ * DLsite Coupon Plus v2.1.0
  * 单文件构建产物，请勿直接编辑；改动请改 extension/ 或 userscript/src/ 后重新构建。
  * 数据源：https://dlsite.momo-yu.com （本脚本不在运行时请求第三方价格服务）
  * 许可：MIT。本项目非 DLsite 官方产品。

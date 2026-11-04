@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "DLsite Coupon Plus",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "DLsite 作品ページにクーポン適用後の最安値と価格推移を表示し、多部購買の試算も行います。UI は DLsite の表示言語に追従します。",
   "permissions": [
     "storage"

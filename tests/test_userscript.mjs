@@ -13,6 +13,9 @@ import vm from 'node:vm';
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const SHIM = readFileSync(join(ROOT, 'userscript/src/shim.js'), 'utf8');
 const BUNDLE = readFileSync(join(ROOT, 'userscript/dist/dlsite-coupon-plus.user.js'), 'utf8');
+const VERSION = JSON.parse(
+  readFileSync(join(ROOT, 'extension/manifest.json'), 'utf8')
+).version;
 
 let passed = 0;
 function test(name, fn) {
@@ -160,7 +163,7 @@ test('元数据块完整', () => {
   const meta = BUNDLE.slice(0, BUNDLE.indexOf('// ==/UserScript=='));
   for (const line of [
     '@name         DLsite Coupon Plus',
-    '@version      2.0.0',
+    `@version      ${VERSION}`,
     '@match        https://www.dlsite.com/*/work/=/product_id/*',
     '@match        https://www.dlsite.com/*/cart',
     '@grant        GM_xmlhttpRequest',
@@ -429,7 +432,7 @@ function blockText(panel) {
   return JSON.stringify(block.children.map((c) => c.textContent));
 }
 
-await testAsync('券后价低于历史最低时打出「历史新低」', async () => {
+await testAsync('券后价低于历史最低时打出「历史最低价」', async () => {
   const { panel } = loadLowpos(800);
   await new Promise((r) => setTimeout(r, 60));
   const text = blockText(panel);

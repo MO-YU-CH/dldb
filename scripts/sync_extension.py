@@ -25,6 +25,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DST = os.path.join(ROOT, "extension")
 SRC = os.environ.get("DLDB_UPSTREAM", r"H:\Dlsite\dl-ext\price-db-plus")
 NODE = os.environ.get("DLDB_NODE", r"D:\nodejs\node.exe")
+# 发布版本号：同步时统一写进 manifest，扩展与油猴脚本共用
+VERSION = "2.1.0"
 
 FILES = [
     "manifest.json",
@@ -68,7 +70,7 @@ def patch_text(text):
 def patch_manifest(text):
     data = json.loads(text)
     data["name"] = "DLsite Coupon Plus"
-    data["version"] = "2.0.0"
+    data["version"] = VERSION
     data["action"]["default_title"] = "DLsite Coupon Plus"
     data["host_permissions"] = ["https://dlsite.momo-yu.com/*", "https://www.dlsite.com/*"]
     # 本仓库新增的模块：作品页在 content.js 之后挂历史定位
