@@ -28,6 +28,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 SITEMAP_INDEX = "https://price.maenohou.com/sitemap.xml"
 LOOKUP = "https://price.maenohou.com/api/lookup/dlsite/{workno}"
@@ -180,33 +181,50 @@ def stage_sitemap(conn, fetcher):
     print("入队合计 %d 条（去重后以库内计数为准）" % added)
 
 
-def stage_resolve(conn, fetcher, limit):
+def _one(fetcher, url, accept):
+    try:
+        status, body = fetcher.get(url, accept=accept)
+    except RuntimeError:
+        status, body = 0, b""
+    return url, status, body
+
+
+def _iter_fetch(urls, fetcher, workers, accept="text/html,*/*"):
+    """边抓边产出，调用方可以立刻写库。
+
+    每个线程各自 sleep 同一个 delay，提高的是「等待网络」的并行度，
+    单连接的请求间隔不变。
+    """
+    if workers <= 1:
+        for url in urls:
+            yield _one(fetcher, url, accept)
+        return
+
+    pool = ThreadPoolExecutor(max_workers=workers)
+    try:
+        futures = [pool.submit(_one, fetcher, u, accept) for u in urls]
+        for fut in as_completed(futures):
+            yield fut.result()
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)
+
+
+def stage_resolve(conn, fetcher, limit, workers=3):
     rows = conn.execute(
         "SELECT page_url FROM crawl_queue WHERE status='new' ORDER BY page_url LIMIT ?",
         (limit,),
     ).fetchall()
+    urls = [r[0] for r in rows]
     ok = fail = 0
-    for (page_url,) in rows:
-        try:
-            status, body = fetcher.get(page_url)
-        except RuntimeError as exc:
-            print("  ! %s" % exc)
-            conn.execute(
-                "UPDATE crawl_queue SET tries=tries+1, updated_at=datetime('now') WHERE page_url=?",
-                (page_url,),
-            )
-            conn.commit()
-            fail += 1
-            continue
-
+    for page_url, status, body in _iter_fetch(urls, fetcher, workers):
         if status != 200:
             conn.execute(
-                "UPDATE crawl_queue SET status='page_error', note=?, updated_at=datetime('now') "
-                "WHERE page_url=?",
+                "UPDATE crawl_queue SET status='page_error', note=?, tries=tries+1, "
+                "updated_at=datetime('now') WHERE page_url=?",
                 (str(status), page_url),
             )
-            conn.commit()
             fail += 1
+            conn.commit()
             continue
 
         html = body.decode("utf-8", "replace")
@@ -229,20 +247,17 @@ def stage_resolve(conn, fetcher, limit):
     return ok
 
 
-def stage_fetch(conn, fetcher, limit):
+def stage_fetch(conn, fetcher, limit, workers=3):
     rows = conn.execute(
         "SELECT DISTINCT workno FROM crawl_queue WHERE status='ready' "
         "AND workno IS NOT NULL AND workno NOT IN (SELECT workno FROM works) LIMIT ?",
         (limit,),
     ).fetchall()
+    worknos = [r[0] for r in rows]
+    urls = [LOOKUP.format(workno=w) for w in worknos]
     ok = empty = 0
-    for (workno,) in rows:
-        try:
-            status, body = fetcher.get(LOOKUP.format(workno=workno), accept="application/json")
-        except RuntimeError as exc:
-            print("  ! %s" % exc)
-            continue
-
+    for url, status, body in _iter_fetch(urls, fetcher, workers, "application/json"):
+        workno = url.rsplit("/", 1)[-1]
         if status == 404:
             conn.execute(
                 "UPDATE crawl_queue SET status='missing', updated_at=datetime('now') WHERE workno=?",
@@ -339,6 +354,7 @@ def main():
     ap.add_argument("--stage", default="all", choices=["all", "sitemap", "resolve", "fetch", "stats"])
     ap.add_argument("--limit", type=int, default=300, help="单次调用的条数上限")
     ap.add_argument("--batch", type=int, default=200, help="all 模式下每轮 解析→取值 的批大小")
+    ap.add_argument("--workers", type=int, default=3, help="并发抓取线程数（写库仍串行）")
     ap.add_argument("--delay", type=float, default=0.4, help="请求间隔秒（另加 0~50%% 抖动）")
     ap.add_argument("--timeout", type=float, default=25)
     ap.add_argument("--max-hours", type=float, default=0, help=">0 时到点自动停")
@@ -362,9 +378,9 @@ def main():
                 print("[1/3] 队列已有数据，跳过 sitemap")
 
         if args.stage == "resolve":
-            stage_resolve(conn, fetcher, args.limit)
+            stage_resolve(conn, fetcher, args.limit, args.workers)
         elif args.stage == "fetch":
-            stage_fetch(conn, fetcher, args.limit)
+            stage_fetch(conn, fetcher, args.limit, args.workers)
         elif args.stage == "all":
             # 交替推进：每轮先解析一小批页面，再立刻把这一批取回来。
             # 这样任何时刻中断，库里都是"可用的一部分"而不是一堆待解析 URL。
@@ -385,9 +401,9 @@ def main():
                 rounds += 1
                 print("--- 第 %d 轮：待解析 %d，待取值 %d ---" % (rounds, new_n, ready_n))
                 if new_n:
-                    stage_resolve(conn, fetcher, args.batch)
+                    stage_resolve(conn, fetcher, args.batch, args.workers)
                 if ready_n:
-                    stage_fetch(conn, fetcher, args.batch)
+                    stage_fetch(conn, fetcher, args.batch, args.workers)
     except KeyboardInterrupt:
         print("\n已中断，进度已保存。")
     finally:
