@@ -19,7 +19,7 @@ PKG="$ROOT/temp/dldb-src.tgz"
 echo "[1/4] 打包"
 tar -czf "$PKG" -C "$ROOT" \
   --exclude='server/.venv' --exclude='server/data' --exclude='__pycache__' \
-  server tests docs scripts extension deploy README.md PRIVACY.md LICENSE .gitignore .gitattributes
+  server tests docs scripts extension userscript deploy README.md PRIVACY.md LICENSE .gitignore .gitattributes
 
 echo "[2/4] 上传代码"
 scp -q "${SSH_OPTS[@]}" "$PKG" "$HOST:/home/ubuntu/dldb-src.tgz"

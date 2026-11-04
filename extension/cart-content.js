@@ -286,8 +286,58 @@
     document.body.appendChild(mask);
   }
 
+  /**
+   * カートの商品行が描画されるまで待つ。
+   * ページがまだ読み込み中だと、商品 API とクーポン API の取得が
+   * ネットワーク待ちで遅れるため、先に土台を整える。
+   */
+  function waitForCartRows(timeoutMs) {
+    return new Promise((resolve) => {
+      const ready = () => document.querySelectorAll('li.cart_list_item, [data-workno]').length > 0;
+      if (ready()) return resolve(true);
+      const start = Date.now();
+      const timer = setInterval(() => {
+        if (ready()) {
+          clearInterval(timer);
+          resolve(true);
+          return;
+        }
+        if (Date.now() - start > timeoutMs) {
+          clearInterval(timer);
+          resolve(false);
+        }
+      }, 250);
+    });
+  }
+
+  /**
+   * 分割案が組合せ折扣のまとまりを崩しているか。
+   * 同じ campaign の商品が複数の会計に散らばっていたら true。
+   */
+  function campaignsBroken(items, plans) {
+    const members = new Map();
+    for (const it of items) {
+      const cid = it.discountCampaignId;
+      if (!cid) continue;
+      const set = members.get(cid) || new Set();
+      set.add(it.workno);
+      members.set(cid, set);
+    }
+    for (const set of members.values()) {
+      const groups = new Set();
+      for (const workno of set) {
+        const idx = plans.findIndex((p) => p.items.some((i) => i.workno === workno));
+        if (idx >= 0) groups.add(idx);
+      }
+      if (groups.size > 1) return true;
+    }
+    return false;
+  }
+
   async function main() {
     if (!/\/cart(\/|$|\?)/.test(location.pathname + location.search)) return;
+
+    await waitForCartRows(10000);
 
     const settings = await PDP.history.getSettings();
     const locale = i18n.resolveLocale(settings);
@@ -303,11 +353,19 @@
     const panel = buildPanel();
     panel.appendChild(el('div', `color:${COLOR.dim};`, t('loading')));
 
+    // 1 本の遅いリクエストでパネルが「読み込み中」のまま固まらないよう、
+    // 前置きのデータ取得には全体の上限を設ける
+    const withTimeout = (promise, ms, fallback) =>
+      Promise.race([
+        Promise.resolve(promise).catch(() => fallback),
+        new Promise((resolve) => setTimeout(() => resolve(fallback), ms)),
+      ]);
+
     const [coupons, exchange] = await Promise.all([
-      cartLib.fetchMyCoupons(site).catch(() => null),
-      cartLib.fetchExchange(site).catch(() => null),
+      withTimeout(cartLib.fetchMyCoupons(site), 14000, null),
+      withTimeout(cartLib.fetchExchange(site), 8000, null),
       // カート行だけでは custom_genres / options が欠けるので作品 API で補う
-      cartLib.enrichItems(items).catch(() => items),
+      withTimeout(cartLib.enrichItems(items), 20000, items),
     ]);
     const money = moneyFormatter(currency, exchange, locale);
 
@@ -320,7 +378,7 @@
 
     const result = cartLib.optimize(items, coupons);
     if (!result) return;
-    const { plans, allInOne } = result;
+    const { plans, allInOne, splitPlans } = result;
     const allTotal = plans.reduce((a, p) => a + p.totalJpy, 0);
     const saveJpy = allInOne.totalJpy - allTotal;
     const view = {
@@ -373,6 +431,23 @@
       panel.appendChild(
         row(t('cartSplitNoGain'), t('cartKeepAsIs'), { valueColor: COLOR.good })
       );
+      // 分けた場合の実額も出す。結論だけ見せて根拠を隠さない
+      const comparePlans = plans.length > 1 ? plans : splitPlans;
+      if (comparePlans && comparePlans.length > 1) {
+        const splitTotal = comparePlans.reduce((a, p) => a + p.totalJpy, 0);
+        const extra = splitTotal - allInOne.totalJpy;
+        const deltaText = extra > 0.5 ? `+${money(extra)}` : t('cartSplitSame');
+        panel.appendChild(
+          row(t('cartSplitCost', { n: comparePlans.length }), `${money(splitTotal)}  (${deltaText})`)
+        );
+
+        // 組合せ折扣が実際に崩れる場合だけ理由を書く。
+        // 「3 冊セットを丸ごと 1 会計に残し、別の 1 冊だけ分ける」ような
+        // 崩れない分け方もあるので、無条件に書くと誤解になる。
+        if (campaignsBroken(items, comparePlans)) {
+          panel.appendChild(el('div', `color:${COLOR.dim};font-size:11px;margin-top:2px;`, t('cartCampaignNote')));
+        }
+      }
     }
 
     // 行に付けたマークの読み方と、各回の会計の中身をパネル内で完結させる。

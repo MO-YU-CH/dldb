@@ -172,7 +172,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `price-db-plus-records-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `dlsite-coupon-plus-records-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
   });

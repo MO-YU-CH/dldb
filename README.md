@@ -30,11 +30,24 @@ history.js 本机记录 / content.js 作品页面板 / cart.js 拆单优化器 /
 
 ## 油猴脚本
 
+**一键安装**：<https://dlsite.momo-yu.com/dlsite-coupon-plus.user.js>（Tampermonkey 会识别 `.user.js` 后缀并弹出安装页）
+
 ```bash
 node userscript/build.mjs          # 产出 userscript/dist/dlsite-coupon-plus.user.js
+node tests/test_userscript.mjs     # shim 语义 + 产物不变量，14 项
 ```
 
-构建只做三件事：按依赖顺序拼接、注入元数据块、替换版本号。**不使用 `@require` 拉远程**（延迟、可被篡改、审核风险）。
+构建只做三件事：注入元数据块、按依赖顺序拼接、校验产物。**不使用 `@require` 拉远程**（延迟、可被篡改、审核风险）。
+
+结构：
+
+```
+userscript/src/shim.js           chrome.storage / runtime.sendMessage 的油猴实现（只覆盖扩展真实用到的 9 处调用）
+userscript/src/options-panel.js  设置面板，Shadow DOM 隔离，样式不污染 DLsite
+userscript/build.mjs             拼接与自检
+```
+
+设置入口在 Tampermonkey 的菜单命令里（`DLsite Coupon Plus — 設定 / Settings`）。
 
 ## 价格站
 

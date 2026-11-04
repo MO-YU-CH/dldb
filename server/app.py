@@ -18,6 +18,7 @@ from flask import (
     redirect,
     render_template,
     request,
+    send_file,
     url_for,
 )
 
@@ -229,6 +230,21 @@ def create_app():
             ],
         }
         resp = jsonify(payload)
+        resp.headers["Cache-Control"] = "public, max-age=%d" % CACHE_SECONDS
+        return resp
+
+    @app.get("/dlsite-coupon-plus.user.js")
+    def userscript():
+        """油猴一键安装：Tampermonkey 会识别 .user.js 后缀并弹出安装页。"""
+        path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "userscript",
+            "dist",
+            "dlsite-coupon-plus.user.js",
+        )
+        if not os.path.exists(path):
+            return Response("// build not deployed\n", status=404, mimetype="text/javascript")
+        resp = send_file(path, mimetype="text/javascript", conditional=True)
         resp.headers["Cache-Control"] = "public, max-age=%d" % CACHE_SECONDS
         return resp
 

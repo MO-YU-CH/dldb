@@ -40,6 +40,11 @@
       site: d.siteId || 'maniax',
       priceJpy: Number(d.price) || 0,
       listPriceJpy: Number(d.officialPrice) || Number(d.price) || 0,
+      // 組合せ折扣 (セット割 / まとめ買い) の適用実額。割引は会計単位なので、
+      // 同じ campaign の商品を別会計に分けるとこの価格は維持されない。
+      soloPriceJpy: null, // 作品 API の price (単品価格)。enrichItems で埋める
+      discountCampaignId: d.discountCampaignId || d.discount_campaign_id || null,
+      isDiscount: d.isDiscount || d.is_discount || '',
       makerId: d.makerId || null,
       workType: d.workType || null,
       options: String(d.workOptions || ''),
@@ -62,21 +67,28 @@
    * 適用された実際の支払額なので、product.json の定価で上書きしてはいけない。
    */
   async function enrichItems(items) {
-    await Promise.all(
-      items.map(async (it) => {
+    // 一度に大量のリクエストを投げると待たされるので、少しずつ処理する
+    const queue = items.slice();
+    const worker = async () => {
+      while (queue.length) {
+        const it = queue.shift();
         try {
           const p = await PDP.coupon.fetchProduct(it.site, it.workno);
-          if (!p) return;
+          if (!p) continue;
           if (p.customGenres && p.customGenres.size) it.customGenres = p.customGenres;
           if (p.options) it.options = p.options;
           if (p.workType) it.workType = p.workType;
           if (p.makerId) it.makerId = p.makerId;
+          // 単品価格 (組合せ折扣が外れたときに戻る価格)
+          if (p.priceJpy > 0) it.soloPriceJpy = p.priceJpy;
+          if (p.listPriceJpy > 0) it.listPriceJpy = p.listPriceJpy;
           it.enriched = true;
         } catch (e) {
           // 取得できなければカートの値のまま判定する (券が当たらない側に倒れる)
         }
-      })
-    );
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
     return items;
   }
 
@@ -84,16 +96,27 @@
   function readCart(doc) {
     const d = doc || document;
     const rows = Array.from(d.querySelectorAll('li.cart_list_item, [data-workno]'));
-    const items = [];
-    const seen = new Set();
+    const byWorkno = new Map();
     for (const li of rows) {
       if (!li.dataset || (!li.dataset.workno && !li.dataset.productId)) continue;
       const item = parseRow(li);
-      if (!item || seen.has(item.workno)) continue;
-      seen.add(item.workno);
-      items.push(item);
+      if (!item) continue;
+      const prev = byWorkno.get(item.workno);
+      if (prev) {
+        // 同じ作品が PC 用/スマホ用で二重に存在し、片方には
+        // data-discount_campaign_id などが入っていないことがある。
+        // 情報量の多い方を残す (欠けている項目だけ補う)。
+        if (!prev.discountCampaignId && item.discountCampaignId) {
+          prev.discountCampaignId = item.discountCampaignId;
+        }
+        if (!prev.title && item.title) prev.title = item.title;
+        if (!prev.laterHref && item.laterHref) prev.laterHref = item.laterHref;
+        if (!prev.removeHref && item.removeHref) prev.removeHref = item.removeHref;
+        continue;
+      }
+      byWorkno.set(item.workno, item);
     }
-    return items;
+    return Array.from(byWorkno.values());
   }
 
   /** カート画面が表示している合計 (通貨つき) を読む。 表示通貨の判定に使う */
@@ -166,15 +189,61 @@
     return true;
   }
 
+  /**
+   * あるまとまりを 1 回の会計にしたときの支払額を返す関数を作る。
+   *
+   * **組合せ折扣 (セット割 / まとめ買い) は会計単位の割引**なので、同じ
+   * `discountCampaignId` を持つ商品を別々の会計に分けると、その割引は失われて
+   * 単品価格 (`soloPriceJpy`) に戻る。実測: 「3本以上60%OFFセット割」の 3 冊を
+   * 3+1 に割ると、カート表示 220 円の本が単品価格 275 円に戻り、合計はむしろ高くなる。
+   * ここを取り違えると「分けた方が安い」と誤判定する。
+   */
+  function makeSubsetPricer(allItems) {
+    const members = new Map();
+    for (const it of allItems) {
+      const cid = it.discountCampaignId;
+      if (!cid) continue;
+      const set = members.get(cid) || new Set();
+      set.add(it.workno);
+      members.set(cid, set);
+    }
+    const keepsDiscount = (it, inSubset) => {
+      const cid = it.discountCampaignId;
+      if (!cid) return false;
+      const all = members.get(cid);
+      return !!all && Array.from(all).every((w) => inSubset.has(w));
+    };
+    const effective = (it, inSubset) =>
+      keepsDiscount(it, inSubset)
+        ? it.priceJpy
+        : Number.isFinite(it.soloPriceJpy)
+          ? it.soloPriceJpy
+          : it.priceJpy;
+    return {
+      /** 券を当てる前の、商品ごとの実効単価 (券の逐件計算に渡す) */
+      priced: (subset) => {
+        const inSubset = new Set(subset.map((s) => s.workno));
+        return subset.map((it) => ({ priceJpy: effective(it, inSubset) }));
+      },
+      /** 券を当てる前の合計 */
+      total: (subset) => {
+        const inSubset = new Set(subset.map((s) => s.workno));
+        return subset.reduce((a, it) => a + effective(it, inSubset), 0);
+      },
+    };
+  }
+
   /** まとまり 1 つを、券なし/券ありで最安にする */
-  function bestForSubset(subset, coupons, usedOnce) {
-    const sumJpy = subset.reduce((a, it) => a + it.priceJpy, 0);
+  function bestForSubset(subset, coupons, usedOnce, pricer) {
+    const priced = pricer ? pricer.priced(subset) : subset;
+    const sumJpy = priced.reduce((a, it) => a + it.priceJpy, 0);
     let best = { totalJpy: sumJpy, coupon: null };
     for (const c of coupons) {
       // 1 回限りの券は他の会計で使っていたら候補から外す
       if (!c.is_multiple_use && usedOnce.has(c.coupon_id)) continue;
       if (!couponFitsSubset(c, subset, subset[0] && subset[0].site)) continue;
-      const after = PDP.coupon.applyOrder(c, sumJpy);
+      // 券は商品ごとに割り引かれるので、実効単価の配列で計算する
+      const after = PDP.coupon.applyToItems(c, priced);
       if (after === null) continue;
       if (after < best.totalJpy) {
         best = { totalJpy: after, coupon: c };
@@ -198,16 +267,18 @@
     if (!items.length) return null;
     const n = items.length;
     const cache = new Map();
+    const priceOf = makeSubsetPricer(items);
 
     const bestOfMask = (mask) => {
       if (cache.has(mask)) return cache.get(mask);
       const subset = [];
       for (let i = 0; i < n; i += 1) if (mask & (1 << i)) subset.push(items[i]);
-      const plain = subset.reduce((a, it) => a + it.priceJpy, 0);
+      const plain = priceOf.total(subset);
       let best = { totalJpy: plain, coupon: null };
       for (const c of coupons) {
         if (!couponFitsSubset(c, subset)) continue;
-        const after = PDP.coupon.applyToItems(c, subset);
+        // 券は逐件割引なので、組合せ折扣が外れた商品は単品価格で計算する
+        const after = PDP.coupon.applyToItems(c, priceOf.priced(subset));
         if (after === null) continue;
         if (after < best.totalJpy) best = { totalJpy: after, coupon: c };
       }
@@ -220,12 +291,16 @@
 
     // 商品が多すぎるときは総当たりを諦める
     if (n > 9) {
-      const plans = greedyPlan(items, coupons);
+      const plans = greedyPlan(items, coupons, priceOf);
       return { plans, allInOne, exhaustive: false };
     }
 
     let bestCost = Infinity;
     let bestMasks = null;
+    // 「分けた場合いくらになるか」を必ず出せるよう、2 分割以上に限定した
+    // 最良解も同時に拾っておく (結論だけでなく根拠の数字を見せるため)
+    let bestSplitCost = Infinity;
+    let bestSplitMasks = null;
     const assign = new Array(n).fill(0);
 
     const walk = (i, maxGroup) => {
@@ -239,6 +314,10 @@
           bestCost = cost;
           bestMasks = masks.slice();
         }
+        if (masks.length >= 2 && cost < bestSplitCost - 0.5) {
+          bestSplitCost = cost;
+          bestSplitMasks = masks.slice();
+        }
         return;
       }
       for (let g = 0; g <= maxGroup + 1; g += 1) {
@@ -251,16 +330,32 @@
     let groups = (bestMasks || [(1 << n) - 1]).map((m) => bestOfMask(m));
 
     // 1 回限りの券が複数の会計で使われていたら、一番得な会計だけに残す
-    groups = resolveOnceOnly(groups, items, coupons, bestOfMask);
+    groups = resolveOnceOnly(groups, items, coupons, priceOf);
 
-    const plans = groups.map((g) => ({
+    const toPlan = (g) => ({
       items: g.items.slice(),
       totalJpy: g.totalJpy,
       coupon: g.coupon,
-      savedJpy: g.items.reduce((a, it) => a + it.priceJpy, 0) - g.totalJpy,
-    }));
+      savedJpy: priceOf.total(g.items) - g.totalJpy,
+    });
+
+    const plans = groups.map(toPlan);
     plans.sort((a, b) => b.totalJpy - a.totalJpy);
-    return { plans, allInOne, exhaustive: true };
+
+    // 分割案 (最良が 1 回でも、分けた場合の実額を出せるように)
+    let splitPlans = null;
+    if (bestSplitMasks && bestSplitMasks.length >= 2) {
+      const splitGroups = resolveOnceOnly(
+        bestSplitMasks.map((m) => bestOfMask(m)),
+        items,
+        coupons,
+        priceOf
+      );
+      splitPlans = splitGroups.map(toPlan);
+      splitPlans.sort((a, b) => b.totalJpy - a.totalJpy);
+    }
+
+    return { plans, allInOne, splitPlans, exhaustive: true };
   }
 
   /**
@@ -268,7 +363,7 @@
    * 複数の会計に同じ券が割り当たっていたら、節約額が最大の会計にだけ残し、
    * 他は券なし (または別の券) で計算し直す。
    */
-  function resolveOnceOnly(groups, items, coupons, bestOfMask) {
+  function resolveOnceOnly(groups, items, coupons, pricer) {
     const counts = new Map();
     for (const g of groups) {
       if (g.coupon && !g.coupon.is_multiple_use) {
@@ -286,10 +381,11 @@
       for (let i = 1; i < users.length; i += 1) {
         const g = users[i];
         const others = coupons.filter((c) => c.coupon_id !== id && c.is_multiple_use);
-        let best = { totalJpy: g.items.reduce((a, it) => a + it.priceJpy, 0), coupon: null };
+        const priced = pricer ? pricer.priced(g.items) : g.items;
+        let best = { totalJpy: priced.reduce((a, it) => a + it.priceJpy, 0), coupon: null };
         for (const c of others) {
           if (!couponFitsSubset(c, g.items)) continue;
-          const after = PDP.coupon.applyToItems(c, g.items);
+          const after = PDP.coupon.applyToItems(c, priced);
           if (after !== null && after < best.totalJpy) best = { totalJpy: after, coupon: c };
         }
         g.totalJpy = best.totalJpy;
@@ -300,7 +396,7 @@
   }
 
   /** 商品が多いときの簡易版: 券が当たるまとまりを優先して作る */
-  function greedyPlan(items, coupons) {
+  function greedyPlan(items, coupons, pricer) {
     const remaining = items.slice();
     const plans = [];
     const usedOnce = new Set();
@@ -308,8 +404,9 @@
       let best = null;
       for (let size = Math.min(remaining.length, 6); size >= 1; size -= 1) {
         const subset = remaining.slice(0, size);
-        const r = bestForSubset(subset, coupons, usedOnce);
-        const saving = subset.reduce((a, it) => a + it.priceJpy, 0) - r.totalJpy;
+        const r = bestForSubset(subset, coupons, usedOnce, pricer);
+        const base = pricer ? pricer.total(subset) : subset.reduce((a, it) => a + it.priceJpy, 0);
+        const saving = base - r.totalJpy;
         if (!best || saving > best.saving) best = { subset, r, saving };
       }
       const group = {

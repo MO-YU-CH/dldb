@@ -3,7 +3,9 @@
   "name": "DLsite Coupon Plus",
   "version": "2.0.0",
   "description": "DLsite 作品ページにクーポン適用後の最安値と価格推移を表示し、多部購買の試算も行います。UI は DLsite の表示言語に追従します。",
-  "permissions": ["storage"],
+  "permissions": [
+    "storage"
+  ],
   "host_permissions": [
     "https://dlsite.momo-yu.com/*",
     "https://www.dlsite.com/*"
@@ -13,13 +15,29 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.dlsite.com/*/work/=/product_id/*"],
-      "js": ["lib/i18n.js", "lib/coupon.js", "lib/history.js", "content.js"],
+      "matches": [
+        "https://www.dlsite.com/*/work/=/product_id/*"
+      ],
+      "js": [
+        "lib/i18n.js",
+        "lib/coupon.js",
+        "lib/history.js",
+        "content.js"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://www.dlsite.com/*/cart", "https://www.dlsite.com/*/cart/*"],
-      "js": ["lib/i18n.js", "lib/coupon.js", "lib/history.js", "lib/cart.js", "cart-content.js"],
+      "matches": [
+        "https://www.dlsite.com/*/cart",
+        "https://www.dlsite.com/*/cart/*"
+      ],
+      "js": [
+        "lib/i18n.js",
+        "lib/coupon.js",
+        "lib/history.js",
+        "lib/cart.js",
+        "cart-content.js"
+      ],
       "run_at": "document_idle"
     }
   ],

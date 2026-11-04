@@ -106,6 +106,18 @@ class TestPages(unittest.TestCase):
         sitemap = self.client.get("/sitemap.xml").get_data(as_text=True)
         self.assertIn(WORK_OK, sitemap)
 
+    @unittest.skipUnless(
+        os.path.exists(
+            os.path.join(ROOT, "userscript", "dist", "dlsite-coupon-plus.user.js")
+        ),
+        "油猴产物未构建",
+    )
+    def test_userscript_served(self):
+        res = self.client.get("/dlsite-coupon-plus.user.js")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn(b"// ==UserScript==", res.data)
+        self.assertIn("javascript", res.headers["Content-Type"])
+
 
 class TestApi(unittest.TestCase):
     def setUp(self):

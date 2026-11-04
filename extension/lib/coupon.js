@@ -28,10 +28,24 @@
     return { store: 'dlsite', site: m[1], workno: m[2] };
   }
 
-  async function fetchJson(url) {
-    const res = await fetch(url, { credentials: 'include' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${url}`);
-    return res.json();
+  /**
+   * 作品 API などを取る。**必ずタイムアウトを付ける** — これが無いと 1 本の
+   * 遅いリクエストで呼び出し側 (カートのパネルなど) が永久に待ちになる。
+   */
+  async function fetchJson(url, timeoutMs) {
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const limit = Number(timeoutMs) || 8000;
+    const timer = controller ? setTimeout(() => controller.abort(), limit) : null;
+    try {
+      const res = await fetch(url, {
+        credentials: 'include',
+        signal: controller ? controller.signal : undefined,
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${url}`);
+      return await res.json();
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   /** 作品の正確な情報 (円価格・種別・options・custom_genres・系列) を取る */
