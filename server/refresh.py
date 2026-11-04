@@ -30,10 +30,34 @@ import db
 JST = timezone(timedelta(hours=9))
 UA = "DLsiteCouponPlus/0.1 (price refresh; +https://dlsite.momo-yu.com/about)"
 API = "https://www.dlsite.com/{site}/api/=/product.json?workno={workno}"
+POOL_URL = "https://www.dlsite.com/home/api/=/coupon.json?cdn_cache=1"
+POOL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "coupons.json")
+POOL_TTL = 6 * 3600
 
 
 def jst_today():
     return datetime.now(JST).strftime("%Y-%m-%d")
+
+
+def refresh_pool(path=POOL_PATH, timeout=25):
+    """公开券池一天会变好几次，但没必要每次都拉；失败时保留旧池。"""
+    req = urllib.request.Request(
+        POOL_URL, headers={"User-Agent": UA, "Accept": "application/json"}
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as res:
+            data = json.loads(res.read().decode("utf-8"))
+    except (urllib.error.URLError, TimeoutError, ValueError, OSError) as exc:
+        print("  券池刷新失败（沿用旧池）：%s" % exc)
+        return 0
+    if not isinstance(data, list) or not data:
+        return 0
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(data, fh, ensure_ascii=False)
+    os.replace(tmp, path)
+    return len(data)
 
 
 def fetch_price(workno, site, timeout=20):
@@ -115,11 +139,17 @@ def main():
 
     print("PID=%d 间隔=%.1fs" % (os.getpid(), args.delay))
     conn = db.connect_rw()
+    pool_n = refresh_pool()
+    print("券池：%s" % ("%d 张" % pool_n if pool_n else "未更新，沿用旧池"))
+    last_pool = time.time()
     try:
         if args.once or not args.loop:
             run_once(conn, args.limit, args.delay)
         else:
             while True:
+                if time.time() - last_pool > POOL_TTL:
+                    refresh_pool()
+                    last_pool = time.time()
                 run_once(conn, args.limit, args.delay)
     except KeyboardInterrupt:
         print("已中断")

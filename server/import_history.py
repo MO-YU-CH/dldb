@@ -288,11 +288,25 @@ def stage_fetch(conn, fetcher, limit, workers=3):
             continue
 
         cur = plat.get("current") or {}
-        stats = plat.get("stats") or {}
         site = None
         m = re.search(r"dlsite\.com/([a-z0-9]+)/", plat.get("url") or "")
         if m:
             site = m.group(1)
+
+        samples = sorted(
+            (d, p) for d, p in (plat.get("history") or []) if d and p is not None
+        )
+        # 统计值一律从自己的价格点重算：第三方 stats.maxPrice 混入了定価，
+        # 直接用会把「长期促销」算成 90% 暴跌。
+        prices = [p for _, p in samples]
+        if prices:
+            min_price = min(prices)
+            max_price = max(prices)
+            min_at = next(d for d, p in samples if p == min_price)
+            first_seen = samples[0][0]
+            points = len(samples)
+        else:
+            min_price = max_price = min_at = first_seen = points = None
 
         conn.execute(
             """
@@ -316,17 +330,17 @@ def stage_fetch(conn, fetcher, limit, workers=3):
                 cur.get("price"),
                 cur.get("basePrice"),
                 cur.get("discountRate"),
-                stats.get("minPrice"),
-                stats.get("minPriceAt"),
-                stats.get("maxPrice"),
-                stats.get("firstSeenAt"),
-                stats.get("points"),
+                min_price,
+                min_at,
+                max_price,
+                first_seen,
+                points,
             ),
         )
 
-        samples = [(workno, d, p) for d, p in (plat.get("history") or []) if d and p is not None]
         conn.executemany(
-            "INSERT OR REPLACE INTO price_samples(workno, day, price) VALUES(?,?,?)", samples
+            "INSERT OR REPLACE INTO price_samples(workno, day, price) VALUES(?,?,?)",
+            [(workno, d, p) for d, p in samples],
         )
         conn.execute(
             "UPDATE crawl_queue SET status='done', updated_at=datetime('now') WHERE workno=?",

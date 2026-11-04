@@ -22,7 +22,8 @@
         "lib/i18n.js",
         "lib/coupon.js",
         "lib/history.js",
-        "content.js"
+        "content.js",
+        "lib/lowpos.js"
       ],
       "run_at": "document_idle"
     },

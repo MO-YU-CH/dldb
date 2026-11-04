@@ -15,6 +15,7 @@ data/
 
 # 采集中间态
 server/data/raw/
+server/data/coupons.json
 *.jsonl
 *.log
 

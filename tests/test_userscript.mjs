@@ -232,6 +232,12 @@ function makeEl(tag) {
       this.children = kids;
     },
     addEventListener() {},
+    querySelector(selector) {
+      if (typeof selector === 'string' && selector[0] === '#') {
+        return this.children.find((c) => c.id === selector.slice(1)) || null;
+      }
+      return null;
+    },
     setAttribute(k, v) {
       this.attributes[k] = v;
     },
@@ -346,6 +352,97 @@ await testAsync('重复打开不重复插入宿主', async () => {
   await menu.fn();
   assert.equal(body.children.filter((c) => c.id === 'pdp-settings-host').length, 1);
   assert.equal(host.style.display, 'block');
+});
+
+console.log('lowpos:');
+
+function loadLowpos(couponValue = 800) {
+  const panel = makeEl('div');
+  panel.id = 'pdp-coupon-panel';
+  panel.isConnected = true;
+  const body = makeEl('body');
+
+  const document = {
+    body,
+    documentElement: makeEl('html'),
+    createElement: (tag) => makeEl(tag),
+    getElementById: (id) => (id === 'pdp-coupon-panel' ? panel : null),
+    addEventListener() {},
+  };
+
+  const history = [
+    ['2026-11-01', 1200],
+    ['2026-11-02', 1000],
+    ['2026-11-03', 1000],
+    ['2026-11-04', 1000],
+    ['2026-11-05', 1000],
+    ['2026-11-06', 1000],
+  ];
+
+  const sandbox = {
+    console,
+    setTimeout,
+    document,
+    location: { href: 'https://www.dlsite.com/maniax/work/=/product_id/RJ1.html' },
+    MutationObserver: class {
+      observe() {}
+      disconnect() {}
+    },
+    chrome: {
+      runtime: {
+        lastError: undefined,
+        sendMessage: (msg, cb) =>
+          cb({
+            ok: true,
+            status: 200,
+            data: { platforms: [{ platform: 'dlsite', history }] },
+          }),
+      },
+    },
+    PDP: {
+      i18n: { resolveLocale: () => 'zh-cn' },
+      history: { getSettings: async () => ({}) },
+      coupon: {
+        parseTarget: () => ({ store: 'dlsite', workno: 'RJ1', site: 'maniax' }),
+        readDomCoupon: () => ({
+          present: true,
+          value: couponValue,
+          currency: 'JPY',
+          name: '券',
+        }),
+        readDomPrice: () => ({ value: 900, currency: 'JPY', raw: '900' }),
+        fetchProduct: async () => null,
+      },
+    },
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(readFileSync(join(ROOT, 'extension/lib/lowpos.js'), 'utf8'), sandbox, {
+    filename: 'lowpos.js',
+  });
+  return { panel };
+}
+
+function blockText(panel) {
+  const block = panel.children.find((c) => c.id === 'pdp-lowpos');
+  assert.ok(block, '未挂上定位块');
+  return JSON.stringify(block.children.map((c) => c.textContent));
+}
+
+await testAsync('券后价低于历史最低时打出「历史新低」', async () => {
+  const { panel } = loadLowpos(800);
+  await new Promise((r) => setTimeout(r, 60));
+  const text = blockText(panel);
+  assert.ok(text.includes('历史最低价'), '缺少最低标签：' + text);
+  assert.ok(text.includes('1,000'), '缺少历史最低金额：' + text);
+});
+
+await testAsync('未达新低时给出百分位而非新低标签', async () => {
+  const { panel } = loadLowpos(1100);
+  await new Promise((r) => setTimeout(r, 60));
+  const text = blockText(panel);
+  assert.ok(!text.includes('历史最低价'), '不应误报最低：' + text);
+  assert.ok(text.includes('17%'), '百分位应为 17%（6 天里只有 1 天更贵）：' + text);
 });
 
 console.log(`\n${passed} 项通过`);

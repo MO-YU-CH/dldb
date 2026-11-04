@@ -8,6 +8,7 @@ import json
 import os
 import secrets
 import sqlite3
+import time
 from datetime import datetime, timezone
 
 from flask import (
@@ -24,8 +25,10 @@ from flask import (
 )
 
 import charts
+import coupons
 import db
 import i18n
+import pricing
 
 BASE_URL = os.environ.get("DLDB_BASE_URL", "https://dlsite.momo-yu.com")
 SITE_NAME = "DLsite Coupon Plus"
@@ -47,6 +50,68 @@ def _userscript_version():
 
 
 USERSCRIPT_VERSION = _userscript_version()
+
+POOL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "coupons.json")
+_pool_cache = {"mtime": None, "pool": coupons.Pool([])}
+
+
+def get_pool():
+    """券池按文件 mtime 热加载：刷新任务换了券池，站点下一次请求就生效。"""
+    try:
+        mtime = os.path.getmtime(POOL_PATH)
+    except OSError:
+        return _pool_cache["pool"]
+    if _pool_cache["mtime"] != mtime:
+        _pool_cache["pool"] = coupons.load(POOL_PATH)
+        _pool_cache["mtime"] = mtime
+    return _pool_cache["pool"]
+
+
+_rank_cache = {"key": None, "rows": [], "at": 0.0}
+RANK_TTL = 300
+
+
+def coupon_new_lows(conn, pool, limit=50, min_points=30):
+    """券后价低于历史最低的作品。20k 行 × 几张券，算一次缓存 5 分钟。"""
+    key = (round(time.time() / RANK_TTL), _pool_cache["mtime"], limit, min_points)
+    if _rank_cache["key"] == key:
+        return _rank_cache["rows"]
+
+    rows = conn.execute(
+        "SELECT workno, title, circle, site, current_price, min_price, points FROM works "
+        "WHERE points >= ? AND current_price IS NOT NULL AND min_price IS NOT NULL",
+        (min_points,),
+    ).fetchall()
+
+    out = []
+    for row in rows:
+        after, coupon = pool.best(row["workno"], row["current_price"], row["site"])
+        # 严格低于历史最低才算「新低」；持平只是「处于最低」，不进榜
+        if after is None or after >= row["min_price"]:
+            continue
+        out.append(
+            {
+                "workno": row["workno"],
+                "title": row["title"],
+                "circle": row["circle"],
+                "coupon_price": after,
+                "min_price": row["min_price"],
+                "points": row["points"],
+                "gap": row["min_price"] - after,
+                "gap_pct": (
+                    int(round((row["min_price"] - after) * 100.0 / row["min_price"]))
+                    if row["min_price"]
+                    else 0
+                ),
+                "coupon_name": coupon.get("coupon_name") if coupon else None,
+            }
+        )
+    # 按相对跌幅排序：绝对额排序会被一张 15% 券刷屏（2640→2244 全是 396 円）
+    out.sort(key=lambda r: (-r["gap_pct"], -r["points"], -r["gap"], r["min_price"]))
+    out = out[:limit]
+
+    _rank_cache.update({"key": key, "rows": out, "at": time.time()})
+    return out
 
 
 def create_app():
@@ -169,6 +234,15 @@ def create_app():
         svg, chart_stats = charts.render(
             history, i18n.t(locale, "chart_alt", title=row["title"] or workno)
         )
+
+        # 券后价与历史定位：券是公开券池口径，比用户个人持券保守
+        coupon_after, coupon = (None, None)
+        if row["current_price"]:
+            coupon_after, coupon = get_pool().best(
+                workno, row["current_price"], row["site"]
+            )
+        pos = pricing.position([h["price"] for h in history], coupon_after)
+
         return _render(
             "work.html",
             active="work",
@@ -178,6 +252,9 @@ def create_app():
             chart_stats=chart_stats,
             title=row["title"],
             dl_url=db.dlsite_url(workno, row["site"]),
+            coupon_after=coupon_after,
+            coupon=coupon,
+            pos=pos,
         )
 
     @app.get("/<locale>/search")
@@ -191,8 +268,9 @@ def create_app():
         return _render(
             "rank.html",
             active="rank",
-            rows=db.biggest_drops(g.db, 50),
+            rows=coupon_new_lows(g.db, get_pool(), 50),
             stats=db.coverage(g.db),
+            pool=get_pool().describe(),
         )
 
     @app.get("/<locale>/about")
@@ -216,11 +294,19 @@ def create_app():
             return jsonify({"error": "not found", "workId": workno}), 404
 
         history = db.get_history(g.db, workno)
+        coupon_after, coupon = (None, None)
+        if row["current_price"]:
+            coupon_after, coupon = get_pool().best(
+                workno, row["current_price"], row["site"]
+            )
+        pos = pricing.position([h["price"] for h in history], coupon_after)
+
         payload = {
             "workId": workno,
             "url": "%s/%s/works/%s" % (BASE_URL, i18n.DEFAULT_LOCALE, workno),
             "title": row["title"],
             "circle": row["circle"],
+            "position": pos,
             "platforms": [
                 {
                     "platform": "dlsite",
@@ -235,6 +321,8 @@ def create_app():
                             and row["current_price"] < row["base_price"]
                         ),
                         "couponRate": None,
+                        "couponPrice": coupon_after,
+                        "couponName": coupon.get("coupon_name") if coupon else None,
                         "recordedAt": history[-1]["day"] if history else None,
                     },
                     "stats": {

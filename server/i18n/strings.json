@@ -20,9 +20,9 @@
     "work_updated": "最終更新",
     "chart_title": "価格推移",
     "chart_alt": "{title} の価格推移グラフ",
-    "coupon_note": "表示価格はクーポン適用前です。券適用後の価格は拡張機能で確認できます。",
+    "coupon_note": "券後価格は公開クーポンで計算しています。ログイン限定のクーポンを使うとさらに安くなる場合があります。",
     "rank_title": "値下げ率ランキング",
-    "rank_note": "現在価格が過去最高価格を下回っている作品を、下落率の大きい順に並べています。",
+    "rank_note": "クーポン適用後の価格が、記録済みの過去最安を下回っている作品を、下回り幅の大きい順に並べています。",
     "rank_drop": "{pct}% 下落",
     "rank_empty": "ランキングを作成できるデータがまだありません。",
     "about_title": "このサイトについて",
@@ -39,7 +39,11 @@
     "stat_last": "最終記録",
     "th_work": "作品",
     "th_price": "価格",
-    "th_drop": "下落率"
+    "th_drop": "下落率",
+    "rank_newlow": "券後価格が過去最安を更新した作品",
+    "pos_low": "過去最安",
+    "pos_pct": "過去の取引日の {pct}% より安い",
+    "couponAfter": "券後価格"
   },
   "en-us": {
     "tagline": "Daily price tracking for DLsite works, with full history and all-time lows.",
@@ -62,9 +66,9 @@
     "work_updated": "Last updated",
     "chart_title": "Price history",
     "chart_alt": "Price history chart for {title}",
-    "coupon_note": "Prices shown are before coupons. Use the browser extension to see the post-coupon price.",
+    "coupon_note": "Post-coupon prices use the public coupon pool; account-only coupons may be cheaper.",
     "rank_title": "Biggest price drops",
-    "rank_note": "Works whose current price is below their recorded high, sorted by drop rate.",
+    "rank_note": "Works whose post-coupon price is below their recorded low, sorted by how far below.",
     "rank_drop": "down {pct}%",
     "rank_empty": "Not enough data for a ranking yet.",
     "about_title": "About this site",
@@ -81,7 +85,11 @@
     "stat_last": "last record",
     "th_work": "Work",
     "th_price": "Price",
-    "th_drop": "Drop"
+    "th_drop": "Drop",
+    "rank_newlow": "Works at an all-time low after coupons",
+    "pos_low": "All-time low",
+    "pos_pct": "Cheaper than {pct}% of recorded days",
+    "couponAfter": "After coupon"
   },
   "zh-cn": {
     "tagline": "每天记录 DLsite 作品价格，展示历史走势与最低价。",
@@ -104,9 +112,9 @@
     "work_updated": "最后更新",
     "chart_title": "价格走势",
     "chart_alt": "{title} 的价格走势图",
-    "coupon_note": "此处价格未计优惠券。券后价请在浏览器扩展中查看。",
+    "coupon_note": "券后价按公开券池计算；登录限定的券可能更便宜。",
     "rank_title": "降价率排行",
-    "rank_note": "当前价低于历史最高价的作品，按跌幅排序。",
+    "rank_note": "券后价已低于本库记录的历史最低价，按低于幅度排序。",
     "rank_drop": "下跌 {pct}%",
     "rank_empty": "数据不足，暂无法生成榜单。",
     "about_title": "关于本站",
@@ -123,7 +131,11 @@
     "stat_last": "最后记录",
     "th_work": "作品",
     "th_price": "价格",
-    "th_drop": "跌幅"
+    "th_drop": "跌幅",
+    "rank_newlow": "券后价创历史新低的作品",
+    "pos_low": "历史最低",
+    "pos_pct": "比过去 {pct}% 的记录日更便宜",
+    "couponAfter": "券后价"
   },
   "zh-tw": {
     "tagline": "每天記錄 DLsite 作品價格，呈現歷史走勢與最低價。",
@@ -146,9 +158,9 @@
     "work_updated": "最後更新",
     "chart_title": "價格走勢",
     "chart_alt": "{title} 的價格走勢圖",
-    "coupon_note": "此處價格未計優惠券。券後價請在瀏覽器擴充功能中查看。",
+    "coupon_note": "券後價依公開券池計算；登入限定的券可能更便宜。",
     "rank_title": "降價率排行",
-    "rank_note": "目前價格低於歷史最高價的作品，依跌幅排序。",
+    "rank_note": "券後價已低於本庫記錄的歷史最低價，依低於幅度排序。",
     "rank_drop": "下跌 {pct}%",
     "rank_empty": "資料不足，暫無法產生排行榜。",
     "about_title": "關於本站",
@@ -165,7 +177,11 @@
     "stat_last": "最後記錄",
     "th_work": "作品",
     "th_price": "價格",
-    "th_drop": "跌幅"
+    "th_drop": "跌幅",
+    "rank_newlow": "券後價創歷史新低的作品",
+    "pos_low": "歷史最低",
+    "pos_pct": "比過去 {pct}% 的記錄日更便宜",
+    "couponAfter": "券後價"
   },
   "ko-kr": {
     "tagline": "DLsite 작품 가격을 매일 기록하고 추이와 최저가를 보여 줍니다.",
@@ -188,9 +204,9 @@
     "work_updated": "최종 갱신",
     "chart_title": "가격 추이",
     "chart_alt": "{title} 가격 추이 그래프",
-    "coupon_note": "표시된 가격은 쿠폰 적용 전입니다. 쿠폰 적용 후 가격은 확장 프로그램에서 확인하세요.",
+    "coupon_note": "쿠폰 적용 가격은 공개 쿠폰 기준입니다. 로그인 전용 쿠폰을 쓰면 더 저렴할 수 있습니다.",
     "rank_title": "가격 인하율 순위",
-    "rank_note": "현재 가격이 역대 최고가보다 낮은 작품을 하락률 순으로 정렬했습니다.",
+    "rank_note": "쿠폰 적용 가격이 기록된 역대 최저가보다 낮은 작품을 낮은 폭 순으로 정렬했습니다.",
     "rank_drop": "{pct}% 하락",
     "rank_empty": "순위를 만들 데이터가 아직 없습니다.",
     "about_title": "사이트 소개",
@@ -207,7 +223,11 @@
     "stat_last": "최근 기록",
     "th_work": "작품",
     "th_price": "가격",
-    "th_drop": "하락률"
+    "th_drop": "하락률",
+    "rank_newlow": "쿠폰 적용 후 역대 최저가 작품",
+    "pos_low": "역대 최저",
+    "pos_pct": "기록된 날의 {pct}%보다 저렴",
+    "couponAfter": "쿠폰 적용가"
   },
   "es-es": {
     "tagline": "Seguimiento diario de precios de obras de DLsite, con historial y mínimos históricos.",
@@ -230,9 +250,9 @@
     "work_updated": "Última actualización",
     "chart_title": "Historial de precios",
     "chart_alt": "Gráfico de precios de {title}",
-    "coupon_note": "Los precios no incluyen cupones. Consulta el precio con cupón en la extensión.",
+    "coupon_note": "Los precios con cupón usan el grupo público; los cupones de cuenta pueden ser más baratos.",
     "rank_title": "Mayores bajadas",
-    "rank_note": "Obras cuyo precio actual está por debajo de su máximo registrado, ordenadas por porcentaje de bajada.",
+    "rank_note": "Obras cuyo precio con cupón está por debajo del mínimo registrado, ordenadas por diferencia.",
     "rank_drop": "baja {pct}%",
     "rank_empty": "Aún no hay datos suficientes para un ranking.",
     "about_title": "Acerca de este sitio",
@@ -249,7 +269,11 @@
     "stat_last": "último registro",
     "th_work": "Obra",
     "th_price": "Precio",
-    "th_drop": "Bajada"
+    "th_drop": "Bajada",
+    "rank_newlow": "Obras en mínimo histórico tras cupones",
+    "pos_low": "Mínimo histórico",
+    "pos_pct": "Más barato que el {pct}% de los días registrados",
+    "couponAfter": "Precio con cupón"
   },
   "de-de": {
     "tagline": "Tägliche Preisverfolgung für DLsite-Werke mit Verlauf und Tiefstwerten.",
@@ -272,9 +296,9 @@
     "work_updated": "Zuletzt aktualisiert",
     "chart_title": "Preisverlauf",
     "chart_alt": "Preisverlaufsdiagramm für {title}",
-    "coupon_note": "Preise ohne Gutschein. Den Preis nach Gutschein zeigt die Browser-Erweiterung.",
+    "coupon_note": "Preise nach Gutschein beruhen auf dem öffentlichen Pool; kontogebundene Gutscheine können günstiger sein.",
     "rank_title": "Größte Preissenkungen",
-    "rank_note": "Werke, deren aktueller Preis unter dem erfassten Höchstwert liegt, sortiert nach Senkung.",
+    "rank_note": "Werke, deren Preis nach Gutschein unter dem erfassten Tiefstwert liegt, sortiert nach Abstand.",
     "rank_drop": "{pct}% günstiger",
     "rank_empty": "Noch nicht genug Daten für eine Rangliste.",
     "about_title": "Über diese Seite",
@@ -291,7 +315,11 @@
     "stat_last": "letzter Eintrag",
     "th_work": "Werk",
     "th_price": "Preis",
-    "th_drop": "Rückgang"
+    "th_drop": "Rückgang",
+    "rank_newlow": "Werke auf Rekordtief nach Gutschein",
+    "pos_low": "Rekordtief",
+    "pos_pct": "Günstiger als {pct}% der erfassten Tage",
+    "couponAfter": "Preis nach Gutschein"
   },
   "fr-fr": {
     "tagline": "Suivi quotidien des prix des œuvres DLsite, avec historique et plus bas niveaux.",
@@ -314,9 +342,9 @@
     "work_updated": "Dernière mise à jour",
     "chart_title": "Historique des prix",
     "chart_alt": "Graphique des prix de {title}",
-    "coupon_note": "Les prix affichés sont hors coupon. Le prix après coupon est visible dans l'extension.",
+    "coupon_note": "Les prix après coupon utilisent le pool public ; les coupons de compte peuvent être plus bas.",
     "rank_title": "Plus fortes baisses",
-    "rank_note": "Œuvres dont le prix actuel est inférieur au plus haut enregistré, triées par taux de baisse.",
+    "rank_note": "Œuvres dont le prix après coupon est inférieur au minimum enregistré, triées par écart.",
     "rank_drop": "−{pct}%",
     "rank_empty": "Pas encore assez de données pour un classement.",
     "about_title": "À propos de ce site",
@@ -333,7 +361,11 @@
     "stat_last": "dernier relevé",
     "th_work": "Œuvre",
     "th_price": "Prix",
-    "th_drop": "Baisse"
+    "th_drop": "Baisse",
+    "rank_newlow": "Œuvres au plus bas historique après coupon",
+    "pos_low": "Plus bas historique",
+    "pos_pct": "Moins cher que {pct}% des jours enregistrés",
+    "couponAfter": "Prix après coupon"
   },
   "id-id": {
     "tagline": "Pelacakan harga karya DLsite setiap hari, lengkap dengan riwayat dan harga terendah.",
@@ -356,9 +388,9 @@
     "work_updated": "Terakhir diperbarui",
     "chart_title": "Riwayat harga",
     "chart_alt": "Grafik riwayat harga {title}",
-    "coupon_note": "Harga belum termasuk kupon. Harga setelah kupon dapat dilihat di ekstensi.",
+    "coupon_note": "Harga setelah kupon memakai kumpulan kupon publik; kupon khusus akun bisa lebih murah.",
     "rank_title": "Penurunan harga terbesar",
-    "rank_note": "Karya dengan harga saat ini di bawah harga tertinggi yang tercatat, diurutkan berdasarkan persentase penurunan.",
+    "rank_note": "Karya yang harga setelah kuponnya di bawah harga terendah tercatat, diurutkan berdasarkan selisih.",
     "rank_drop": "turun {pct}%",
     "rank_empty": "Data belum cukup untuk peringkat.",
     "about_title": "Tentang situs ini",
@@ -375,7 +407,11 @@
     "stat_last": "catatan terakhir",
     "th_work": "Karya",
     "th_price": "Harga",
-    "th_drop": "Penurunan"
+    "th_drop": "Penurunan",
+    "rank_newlow": "Karya pada harga terendah setelah kupon",
+    "pos_low": "Terendah sepanjang catatan",
+    "pos_pct": "Lebih murah dari {pct}% hari tercatat",
+    "couponAfter": "Harga setelah kupon"
   },
   "it-it": {
     "tagline": "Monitoraggio giornaliero dei prezzi delle opere DLsite, con storico e minimi storici.",
@@ -398,9 +434,9 @@
     "work_updated": "Ultimo aggiornamento",
     "chart_title": "Storico prezzi",
     "chart_alt": "Grafico dei prezzi di {title}",
-    "coupon_note": "I prezzi non includono i coupon. Il prezzo dopo coupon è visibile nell'estensione.",
+    "coupon_note": "I prezzi dopo coupon usano il pool pubblico; i coupon dell’account possono essere più bassi.",
     "rank_title": "Ribassi maggiori",
-    "rank_note": "Opere il cui prezzo attuale è sotto il massimo registrato, ordinate per percentuale di ribasso.",
+    "rank_note": "Opere il cui prezzo dopo coupon è sotto il minimo registrato, ordinate per differenza.",
     "rank_drop": "−{pct}%",
     "rank_empty": "Dati insufficienti per una classifica.",
     "about_title": "Informazioni sul sito",
@@ -417,7 +453,11 @@
     "stat_last": "ultimo dato",
     "th_work": "Opera",
     "th_price": "Prezzo",
-    "th_drop": "Calo"
+    "th_drop": "Calo",
+    "rank_newlow": "Opere al minimo storico dopo coupon",
+    "pos_low": "Minimo storico",
+    "pos_pct": "Più economico del {pct}% dei giorni registrati",
+    "couponAfter": "Prezzo dopo coupon"
   },
   "pt-br": {
     "tagline": "Acompanhamento diário dos preços das obras da DLsite, com histórico e mínimas.",
@@ -440,9 +480,9 @@
     "work_updated": "Última atualização",
     "chart_title": "Histórico de preços",
     "chart_alt": "Gráfico de preços de {title}",
-    "coupon_note": "Os preços não incluem cupons. O preço após cupom aparece na extensão.",
+    "coupon_note": "Os preços após cupom usam o pool público; cupons da conta podem sair mais baratos.",
     "rank_title": "Maiores quedas",
-    "rank_note": "Obras cujo preço atual está abaixo da máxima registrada, ordenadas pela taxa de queda.",
+    "rank_note": "Obras cujo preço após cupom está abaixo da mínima registrada, ordenadas pela diferença.",
     "rank_drop": "queda de {pct}%",
     "rank_empty": "Dados insuficientes para um ranking.",
     "about_title": "Sobre este site",
@@ -459,7 +499,11 @@
     "stat_last": "último registro",
     "th_work": "Obra",
     "th_price": "Preço",
-    "th_drop": "Queda"
+    "th_drop": "Queda",
+    "rank_newlow": "Obras no mínimo histórico após cupom",
+    "pos_low": "Mínima histórica",
+    "pos_pct": "Mais barato que {pct}% dos dias registrados",
+    "couponAfter": "Preço após cupom"
   },
   "sv-se": {
     "tagline": "Daglig prisbevakning för DLsite-verk, med historik och lägstanivåer.",
@@ -482,9 +526,9 @@
     "work_updated": "Senast uppdaterad",
     "chart_title": "Prishistorik",
     "chart_alt": "Prisdiagram för {title}",
-    "coupon_note": "Priserna är före kupong. Priset efter kupong visas i tillägget.",
+    "coupon_note": "Priser efter kupong bygger på den publika poolen; kontobundna kuponger kan vara lägre.",
     "rank_title": "Största prissänkningarna",
-    "rank_note": "Verk vars aktuella pris ligger under högsta noterade, sorterade efter sänkning.",
+    "rank_note": "Verk vars pris efter kupong ligger under det lägsta noterade, sorterade efter skillnad.",
     "rank_drop": "−{pct}%",
     "rank_empty": "Inte tillräckligt med data för en ranking.",
     "about_title": "Om sidan",
@@ -501,7 +545,11 @@
     "stat_last": "senaste post",
     "th_work": "Verk",
     "th_price": "Pris",
-    "th_drop": "Sänkning"
+    "th_drop": "Sänkning",
+    "rank_newlow": "Verk på lägsta nivå efter kupong",
+    "pos_low": "Lägsta noterade",
+    "pos_pct": "Billigare än {pct}% av de registrerade dagarna",
+    "couponAfter": "Pris efter kupong"
   },
   "th-th": {
     "tagline": "ติดตามราคาผลงาน DLsite ทุกวัน พร้อมประวัติราคาและราคาต่ำสุด",
@@ -524,9 +572,9 @@
     "work_updated": "อัปเดตล่าสุด",
     "chart_title": "แนวโน้มราคา",
     "chart_alt": "กราฟแนวโน้มราคาของ {title}",
-    "coupon_note": "ราคาที่แสดงยังไม่รวมคูปอง ราคาหลังใช้คูปองดูได้ในส่วนขยาย",
+    "coupon_note": "ราคาหลังใช้คูปองคำนวณจากคูปองสาธารณะ คูปองเฉพาะบัญชีอาจถูกกว่า",
     "rank_title": "อันดับราคาลดลง",
-    "rank_note": "เรียงผลงานที่ราคาปัจจุบันต่ำกว่าราคาสูงสุดที่เคยบันทึก ตามอัตราการลด",
+    "rank_note": "ผลงานที่ราคาหลังใช้คูปองต่ำกว่าราคาต่ำสุดที่บันทึกไว้ เรียงตามส่วนต่าง",
     "rank_drop": "ลดลง {pct}%",
     "rank_empty": "ข้อมูลยังไม่พอสำหรับจัดอันดับ",
     "about_title": "เกี่ยวกับไซต์นี้",
@@ -543,7 +591,11 @@
     "stat_last": "บันทึกล่าสุด",
     "th_work": "ผลงาน",
     "th_price": "ราคา",
-    "th_drop": "อัตราลด"
+    "th_drop": "อัตราลด",
+    "rank_newlow": "ผลงานที่ราคาต่ำสุดเป็นประวัติการณ์หลังใช้คูปอง",
+    "pos_low": "ต่ำสุดเป็นประวัติการณ์",
+    "pos_pct": "ถูกกว่าวันที่บันทึกไว้ {pct}%",
+    "couponAfter": "ราคาหลังใช้คูปอง"
   },
   "vi-vn": {
     "tagline": "Theo dõi giá tác phẩm DLsite hằng ngày, kèm lịch sử và mức giá thấp nhất.",
@@ -566,9 +618,9 @@
     "work_updated": "Cập nhật lần cuối",
     "chart_title": "Diễn biến giá",
     "chart_alt": "Biểu đồ giá của {title}",
-    "coupon_note": "Giá hiển thị chưa gồm coupon. Xem giá sau coupon trong tiện ích mở rộng.",
+    "coupon_note": "Giá sau coupon tính theo nhóm coupon công khai; coupon riêng tài khoản có thể rẻ hơn.",
     "rank_title": "Mức giảm lớn nhất",
-    "rank_note": "Các tác phẩm có giá hiện tại thấp hơn mức cao nhất từng ghi nhận, sắp theo tỉ lệ giảm.",
+    "rank_note": "Tác phẩm có giá sau coupon thấp hơn mức thấp nhất đã ghi nhận, sắp theo mức chênh.",
     "rank_drop": "giảm {pct}%",
     "rank_empty": "Chưa đủ dữ liệu để xếp hạng.",
     "about_title": "Giới thiệu trang",
@@ -585,6 +637,10 @@
     "stat_last": "bản ghi cuối",
     "th_work": "Tác phẩm",
     "th_price": "Giá",
-    "th_drop": "Mức giảm"
+    "th_drop": "Mức giảm",
+    "rank_newlow": "Tác phẩm thấp nhất lịch sử sau khi áp coupon",
+    "pos_low": "Thấp nhất lịch sử",
+    "pos_pct": "Rẻ hơn {pct}% số ngày đã ghi nhận",
+    "couponAfter": "Giá sau coupon"
   }
 }

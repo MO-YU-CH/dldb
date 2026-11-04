@@ -71,6 +71,20 @@ class TestLocales(unittest.TestCase):
                 set(i18n.STRINGS[loc["code"]]), base, "%s 缺键" % loc["code"]
             )
 
+    def test_template_keys_exist(self):
+        """模板里 T('xxx') 用到的键必须在字典里，否则页面上会直接漏出键名。"""
+        import re
+
+        folder = os.path.join(SERVER, "templates")
+        text = ""
+        for name in os.listdir(folder):
+            if name.endswith(".html"):
+                with open(os.path.join(folder, name), encoding="utf-8") as fh:
+                    text += fh.read()
+        used = set(re.findall(r"T\('([A-Za-z0-9_]+)'", text))
+        missing = used - set(i18n.STRINGS[i18n.DEFAULT_LOCALE])
+        self.assertEqual(missing, set(), "模板引用了不存在的文案键：%s" % sorted(missing))
+
     def test_root_redirects(self):
         res = self.client.get("/")
         self.assertEqual(res.status_code, 302)

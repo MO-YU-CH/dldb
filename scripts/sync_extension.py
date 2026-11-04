@@ -71,6 +71,12 @@ def patch_manifest(text):
     data["version"] = "2.0.0"
     data["action"]["default_title"] = "DLsite Coupon Plus"
     data["host_permissions"] = ["https://dlsite.momo-yu.com/*", "https://www.dlsite.com/*"]
+    # 本仓库新增的模块：作品页在 content.js 之后挂历史定位
+    for cs in data.get("content_scripts", []):
+        js = cs.get("js") or []
+        if any(p.endswith("content.js") for p in js) and "lib/lowpos.js" not in js:
+            js.append("lib/lowpos.js")
+        cs["js"] = js
     return json.dumps(data, ensure_ascii=False, indent=2) + "\n"
 
 

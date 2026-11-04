@@ -1,24 +1,30 @@
 {% extends "base.html" %}
-{% block title %}{{ T('rank_title') }} — {{ site_name }}{% endblock %}
+{% block title %}{{ T('rank_newlow') }} — {{ site_name }}{% endblock %}
 
 {% block content %}
 <section class="hero small">
-  <h1>{{ T('rank_title') }}</h1>
+  <h1>{{ T('rank_newlow') }}</h1>
   <p class="lead">{{ T('rank_note') }}</p>
 </section>
 
 {% if rows %}
 <table class="ranktable">
   <thead>
-    <tr><th>{{ T('th_work') }}</th><th class="num">{{ T('th_price') }}</th><th class="num">{{ T('th_drop') }}</th></tr>
+    <tr>
+      <th>{{ T('th_work') }}</th>
+      <th class="num">{{ T('couponAfter') }}</th>
+      <th class="num">{{ T('work_lowest') }}</th>
+      <th class="num">Δ</th>
+    </tr>
   </thead>
   <tbody>
     {% for w in rows %}
     <tr>
       <td><a href="{{ url_for('work', workno=w.workno) }}">{{ w.title or w.workno }}</a>
         <span class="meta">{{ w.workno }}{% if w.circle %} · {{ w.circle }}{% endif %}</span></td>
-      <td class="num">¥{{ w.current_price|num }}</td>
-      <td class="num good">{{ T('rank_drop', pct=w.drop_pct) }}</td>
+      <td class="num">¥{{ w.coupon_price|num }}</td>
+      <td class="num dim">¥{{ w.min_price|num }}</td>
+      <td class="num good">−¥{{ w.gap|num }} <span class="dim">({{ w.gap_pct }}%)</span></td>
     </tr>
     {% endfor %}
   </tbody>
