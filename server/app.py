@@ -4,6 +4,7 @@
 部署：waitress-serve --listen=127.0.0.1:8080 app:app，前置 Caddy/Nginx 与 Cloudflare。
 """
 
+import json
 import os
 import secrets
 import sqlite3
@@ -29,6 +30,23 @@ import i18n
 BASE_URL = os.environ.get("DLDB_BASE_URL", "https://dlsite.momo-yu.com")
 SITE_NAME = "DLsite Coupon Plus"
 CACHE_SECONDS = int(os.environ.get("DLDB_CACHE_SECONDS", "300"))
+
+
+def _userscript_version():
+    """产物版本号。Cloudflare 对 .js 走 4 小时边缘缓存，链接里带上版本才能立即生效。"""
+    path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "extension",
+        "manifest.json",
+    )
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh).get("version", "0")
+    except (OSError, ValueError):
+        return "0"
+
+
+USERSCRIPT_VERSION = _userscript_version()
 
 
 def create_app():
@@ -93,6 +111,7 @@ def create_app():
             "base_url": BASE_URL,
             "current_path": request.path,
             "csp_nonce": getattr(g, "csp_nonce", ""),
+            "userscript_version": USERSCRIPT_VERSION,
             "now_year": datetime.now(timezone.utc).year,
         }
 
@@ -243,9 +262,12 @@ def create_app():
             "dlsite-coupon-plus.user.js",
         )
         if not os.path.exists(path):
-            return Response("// build not deployed\n", status=404, mimetype="text/javascript")
+            resp = Response("// build not deployed\n", status=404, mimetype="text/javascript")
+            resp.headers["Cache-Control"] = "no-store"
+            return resp
         resp = send_file(path, mimetype="text/javascript", conditional=True)
-        resp.headers["Cache-Control"] = "public, max-age=%d" % CACHE_SECONDS
+        # 60 秒即可：发版后尽快生效，又不至于每次访问都回源
+        resp.headers["Cache-Control"] = "public, max-age=60"
         return resp
 
     @app.get("/healthz")

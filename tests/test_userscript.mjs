@@ -192,4 +192,160 @@ test('设置面板注册菜单命令', () => {
   assert.ok(BUNDLE.includes('pdp-settings-host'));
 });
 
+console.log('options panel:');
+
+// 极简 DOM 桩：只覆盖设置面板用到的方法。它不是浏览器，只用来抓
+// ReferenceError / 拼写错误 / 结构塌陷这类「一跑就炸」的问题，
+// 真实样式与交互仍需在浏览器里点一遍。
+function makeEl(tag) {
+  const node = {
+    tagName: tag,
+    children: [],
+    style: {},
+    attributes: {},
+    className: '',
+    id: '',
+    hidden: false,
+    title: '',
+    type: '',
+    colSpan: 0,
+    value: '',
+    checked: false,
+    _text: '',
+    classList: {
+      _set: new Set(),
+      add(c) {
+        this._set.add(c);
+      },
+      remove(c) {
+        this._set.delete(c);
+      },
+      contains(c) {
+        return this._set.has(c);
+      },
+    },
+    appendChild(child) {
+      this.children.push(child);
+      return child;
+    },
+    replaceChildren(...kids) {
+      this.children = kids;
+    },
+    addEventListener() {},
+    setAttribute(k, v) {
+      this.attributes[k] = v;
+    },
+    attachShadow() {
+      this.shadowRoot = makeEl('#shadow');
+      return this.shadowRoot;
+    },
+  };
+  Object.defineProperty(node, 'textContent', {
+    get() {
+      return node._text;
+    },
+    set(v) {
+      node._text = String(v);
+    },
+  });
+  return node;
+}
+
+function loadPanel() {
+  const body = makeEl('body');
+  const document = {
+    body,
+    documentElement: makeEl('html'),
+    createElement: (tag) => makeEl(tag),
+    getElementById: (id) => body.children.find((c) => c.id === id) || null,
+    addEventListener() {},
+  };
+
+  const settings = { langMode: 'auto', langOverride: '', record: true };
+  const records = {
+    RJ159832: {
+      workno: 'RJ159832',
+      title: 'テスト作品',
+      plain: { minJpy: 275 },
+      coupon: { minJpy: 275, minAt: 1793000000000, couponName: 'テスト券' },
+      theory: { minJpy: 198 },
+      samples: 12,
+      lastSeenAt: 1793000000000,
+    },
+  };
+
+  let menu = null;
+  const sandbox = {
+    console,
+    setTimeout,
+    document,
+    CSSStyleSheet: undefined,
+    confirm: () => true,
+    URL: { createObjectURL: () => 'blob:x', revokeObjectURL() {} },
+    Blob: class {},
+    GM_registerMenuCommand: (label, fn) => {
+      menu = { label, fn };
+    },
+    PDP: {
+      i18n: {
+        LOCALES: [
+          { code: 'ja-jp', label: '日本語' },
+          { code: 'en-us', label: 'English' },
+        ],
+        resolveLocale: () => 'ja-jp',
+        t: (locale, key) => key,
+        formatMoney: (v) => `${v}円`,
+        formatDate: () => '2026-11-04',
+      },
+      history: {
+        getSettings: async () => settings,
+        setSettings: async (patch) => Object.assign(settings, patch),
+        getAll: async () => records,
+        exportJson: async () => ({ records }),
+        clearAll: async () => {
+          for (const k of Object.keys(records)) delete records[k];
+        },
+      },
+    },
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(readFileSync(join(ROOT, 'userscript/src/options-panel.js'), 'utf8'), sandbox, {
+    filename: 'options-panel.js',
+  });
+  return { body, menu };
+}
+
+await testAsync('注册了菜单命令', async () => {
+  const { menu } = loadPanel();
+  assert.ok(menu, '未注册菜单命令');
+  assert.ok(menu.label.includes('DLsite Coupon Plus'));
+  assert.equal(typeof menu.fn, 'function');
+});
+
+await testAsync('打开面板构建出 mask/panel 结构', async () => {
+  const { body, menu } = loadPanel();
+  await menu.fn();
+  const host = body.children.find((c) => c.id === 'pdp-settings-host');
+  assert.ok(host, '未插入宿主节点');
+  assert.equal(host.style.display, 'block');
+  const root = host.shadowRoot;
+  // 无 constructable stylesheet 时会先插一个 <style>，所以按类名找而不是按索引
+  const mask = root.children.find((c) => c.className === 'mask');
+  assert.ok(mask, '未生成 mask 节点');
+  const panel = mask.children[0];
+  assert.equal(panel.className, 'panel');
+  // head + 3 个 section + actions
+  assert.ok(panel.children.length >= 5, `panel 子节点只有 ${panel.children.length} 个`);
+});
+
+await testAsync('重复打开不重复插入宿主', async () => {
+  const { body, menu } = loadPanel();
+  await menu.fn();
+  const host = body.children.find((c) => c.id === 'pdp-settings-host');
+  await menu.fn();
+  assert.equal(body.children.filter((c) => c.id === 'pdp-settings-host').length, 1);
+  assert.equal(host.style.display, 'block');
+});
+
 console.log(`\n${passed} 项通过`);

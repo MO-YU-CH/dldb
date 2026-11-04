@@ -184,7 +184,21 @@
 
     mask.appendChild(panel);
     root.appendChild(mask);
-    return { mask, panel, mode, langRow, lang, rec, tbody, listHead, exportBtn, clearBtn, savedMsg, t };
+    return {
+      mask,
+      panel,
+      close,
+      mode,
+      langRow,
+      lang,
+      rec,
+      tbody,
+      listHead,
+      exportBtn,
+      clearBtn,
+      savedMsg,
+      t,
+    };
   }
 
   function paintRecords(refs, records, locale, t) {
@@ -314,15 +328,20 @@
     opened = { host, close };
   }
 
+  const report = (err) => {
+    // 面板出错不能静默：留一条日志，避免用户以为「菜单没反应」
+    if (typeof console !== 'undefined' && console.error) {
+      console.error('[DLsite Coupon Plus] settings panel failed:', err);
+    }
+  };
+
   if (typeof GM_registerMenuCommand === 'function') {
-    GM_registerMenuCommand(MENU_LABEL, () => {
-      open().catch(() => null);
-    });
+    GM_registerMenuCommand(MENU_LABEL, () => open().catch(report));
   } else {
     // 没有菜单命令时（例如开发调试），用 Alt+Shift+P 打开
     document.addEventListener('keydown', (e) => {
       if (e.altKey && e.shiftKey && (e.key === 'P' || e.key === 'p')) {
-        open().catch(() => null);
+        open().catch(report);
       }
     });
   }

@@ -30,7 +30,9 @@ history.js 本机记录 / content.js 作品页面板 / cart.js 拆单优化器 /
 
 ## 油猴脚本
 
-**一键安装**：<https://dlsite.momo-yu.com/dlsite-coupon-plus.user.js>（Tampermonkey 会识别 `.user.js` 后缀并弹出安装页）
+**一键安装**：<https://dlsite.momo-yu.com/dlsite-coupon-plus.user.js?v=2.0.0>（Tampermonkey 会识别 `.user.js` 后缀并弹出安装页）
+
+> 链接带 `?v=` 是必须的：Cloudflare 对 `.js` 走 4 小时边缘缓存，不带版本号发版后会取到旧文件。
 
 ```bash
 node userscript/build.mjs          # 产出 userscript/dist/dlsite-coupon-plus.user.js
