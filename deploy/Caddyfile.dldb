@@ -1,0 +1,22 @@
+# 追加到 /etc/caddy/Caddyfile 末尾（不要覆盖已有站点块）
+# 应用监听 127.0.0.1:8080，由 Caddy 终止 TLS 并反代。
+# 域名已接入 Cloudflare：保持橙云，源站用 Caddy 自动申请的 Let's Encrypt 证书，
+# CF 侧 SSL 模式设为 Full (strict)。
+
+dlsite.momo-yu.com {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8080
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+
+	log {
+		output file /var/log/caddy/dlsite.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+		format console
+	}
+}

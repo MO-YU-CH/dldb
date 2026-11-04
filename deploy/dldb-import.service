@@ -1,0 +1,23 @@
+[Unit]
+Description=DLsite Coupon Plus history import (one-off, auto-stops when queue is empty)
+Documentation=https://dlsite.momo-yu.com/ja-jp/about
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/dldb/server
+Environment=DLDB_PATH=/home/ubuntu/dldb/server/data/dlsite.db
+# 队列处理完会正常退出（exit 0），不会自动重启
+ExecStart=/home/ubuntu/dldb/server/.venv/bin/python -u import_history.py --stage all --batch 100 --workers 4 --delay 0.4
+Restart=on-failure
+RestartSec=120
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

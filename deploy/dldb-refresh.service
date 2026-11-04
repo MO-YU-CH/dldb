@@ -1,0 +1,23 @@
+[Unit]
+Description=DLsite Coupon Plus daily price refresh
+Documentation=https://dlsite.momo-yu.com/ja-jp/about
+After=network-online.target dldb.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/dldb/server
+Environment=DLDB_PATH=/home/ubuntu/dldb/server/data/dlsite.db
+# Crawl-delay: 10 是 DLsite robots.txt 的要求，不要调小
+ExecStart=/home/ubuntu/dldb/server/.venv/bin/python -u refresh.py --loop --limit 50 --delay 10
+Restart=always
+RestartSec=60
+Nice=15
+IOSchedulingClass=idle
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

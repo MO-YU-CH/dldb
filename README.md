@@ -46,9 +46,8 @@ python import_history.py --limit 200                # 导入历史（可断点�
 python app.py                                       # 开发服务 http://127.0.0.1:8080
 ```
 
-线上：`https://dlsite.momo-yu.com`，部署于 `18.187.213.148`，Cloudflare 代理。
-
-数据来源与合规约束见 `docs/DATA.md`；对原计划的技术核验见 `docs/REVIEW.md`。
+线上：**https://dlsite.momo-yu.com**（AWS Lightsail 东京 `18.178.213.148`，Cloudflare 代理）。
+部署与运维见 `docs/DEPLOY.md`；数据来源与合规约束见 `docs/DATA.md`；对原计划的技术核验见 `docs/REVIEW.md`。
 
 ## 开发约定
 

@@ -1,0 +1,24 @@
+[Unit]
+Description=DLsite Coupon Plus price site
+Documentation=https://dlsite.momo-yu.com/ja-jp/about
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/dldb/server
+Environment=DLDB_PATH=/home/ubuntu/dldb/server/data/dlsite.db
+Environment=DLDB_BASE_URL=https://dlsite.momo-yu.com
+Environment=DLDB_CACHE_SECONDS=300
+ExecStart=/home/ubuntu/dldb/server/.venv/bin/waitress-serve --listen=127.0.0.1:8080 --threads=4 app:app
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/home/ubuntu/dldb/server/data
+
+[Install]
+WantedBy=multi-user.target
