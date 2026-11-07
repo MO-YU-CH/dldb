@@ -50,6 +50,8 @@ CREATE TABLE IF NOT EXISTS works (
     current_price INTEGER,
     base_price    INTEGER,
     discount_rate INTEGER,
+    bulkbuy_start TEXT,          -- 套装活动起止；非空即为套装对象（来自 product.json）
+    bulkbuy_end   TEXT,
     min_price     INTEGER,
     min_at        TEXT,
     max_price     INTEGER,

@@ -246,6 +246,8 @@ def main():
     ap.add_argument("--banners", action="store_true")
     ap.add_argument("--key", default=None)
     ap.add_argument("--all", action="store_true", help="扫描 campaignBanner 里的全部活动")
+    ap.add_argument("--rule-only", action="store_true",
+                    help="只取活动规则与起止（1 页），不枚举参加作品")
     ap.add_argument("--pages", type=int, default=2)
     ap.add_argument("--verify", type=int, default=0)
     ap.add_argument("--save", action="store_true")
@@ -267,6 +269,25 @@ def main():
         if args.save:
             conn = db.connect_rw()
             migrate.apply(conn)
+
+        if args.rule_only:
+            pool = None
+            for row in rows:
+                if "bulkbuy" in (row.get("url") or ""):
+                    url = "https://www.dlsite.com/%s/campaign/bulkbuy/=/key/%s/" % (args.site, row["key"])
+                    min_items, rate = parse_bulkbuy_rule(_get(url))
+                    print("%-28s 套装 %s件以上 %s%%OFF  %s → %s"
+                          % (row["key"], min_items, rate, row["start"][:10], row["end"][:10]))
+                    if conn:
+                        save(conn, args.site, row["key"], row["start"], row["end"], [], pool,
+                             kind="bulkbuy", min_items=min_items, rate=rate)
+                else:
+                    if conn:
+                        save(conn, args.site, row["key"], row["start"], row["end"], [], pool,
+                             kind="discount")
+            if conn:
+                conn.close()
+            return 0
         pool = coupons.load_cached(
             os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "coupons.json")
         )

@@ -79,7 +79,12 @@ def fetch_price(workno, site, timeout=20):
     base = item.get("official_price")
     if price is None:
         return None
-    return int(price), int(base) if base is not None else None
+    return (
+        int(price),
+        int(base) if base is not None else None,
+        item.get("bulkbuy_start"),
+        item.get("bulkbuy_end"),
+    )
 
 
 def refresh_one(conn, workno, site, delay):
@@ -87,7 +92,7 @@ def refresh_one(conn, workno, site, delay):
     try:
         got = fetch_price(workno, site)
         if got:
-            price, base = got
+            price, base, bb_start, bb_end = got
             day = jst_today()
             after, _coupon = coupons.load_cached(POOL_PATH).best(workno, price, site)
             conn.execute(
@@ -103,11 +108,13 @@ def refresh_one(conn, workno, site, delay):
             conn.execute(
                 """
                 UPDATE works SET current_price=?, base_price=COALESCE(?, base_price),
+                       bulkbuy_start=?, bulkbuy_end=?,
                        min_price=?, max_price=?, first_seen=?, points=?,
                        updated_at=datetime('now')
                 WHERE workno=?
                 """,
-                (price, base, agg["lo"], agg["hi"], agg["first"], agg["n"], workno),
+                (price, base, bb_start, bb_end,
+                 agg["lo"], agg["hi"], agg["first"], agg["n"], workno),
             )
             conn.commit()
             ok = True

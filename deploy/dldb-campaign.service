@@ -11,7 +11,8 @@ Environment=DLDB_PATH=/home/ubuntu/dldb/server/data/dlsite.db
 # 每页 50 件，400 页 ≈ 2 万件；单页间隔 10 秒（robots Crawl-delay）
 # 抓取期间给 refresh 让路；结束后补算券后价并释放锁
 ExecStartPre=/usr/bin/touch /home/ubuntu/dldb/server/data/.campaign_lock
-ExecStart=/home/ubuntu/dldb/server/.venv/bin/python campaigns.py --all --pages 400 --save
+# 只需活动规则与起止：资格由单件接口的 bulkbuy_end 判断，不枚举 18 万件
+ExecStart=/home/ubuntu/dldb/server/.venv/bin/python campaigns.py --all --rule-only --save
 ExecStopPost=/bin/sh -c 'cd /home/ubuntu/dldb/server && .venv/bin/python coupon_daily.py || true; rm -f /home/ubuntu/dldb/server/data/.campaign_lock'
 TimeoutStartSec=7200
 Nice=15

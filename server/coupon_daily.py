@@ -40,23 +40,19 @@ def run(path=None, pool_path=None, dry_run=False):
             return 0
 
         day = datetime.now(JST).strftime("%Y-%m-%d")
-        # 进行中的套装活动：券要作用在「套装价」上，不是单品价
+        # 进行中的套装活动：券要作用在「套装价」上，不是单品价。
+        # 是否套装对象由每件自己的 bulkbuy_end 决定（product.json 直接给的）。
         now = datetime.now(JST).strftime("%Y-%m-%dT%H:%M:%S")
-        bundle = {
-            r["workno"]: r["rate"]
-            for r in conn.execute(
-                "SELECT cw.workno AS workno, MAX(c.rate) AS rate "
-                "FROM campaign_works cw JOIN campaigns c ON c.key = cw.key "
-                "WHERE c.kind='bulkbuy' AND c.rate IS NOT NULL "
-                "  AND (c.start IS NULL OR c.start='' OR c.start <= ?) "
-                "  AND (c.end IS NULL OR c.end='' OR c.end >= ?) "
-                "GROUP BY cw.workno",
-                (now, now),
-            )
-        }
+        row = conn.execute(
+            "SELECT MAX(rate) AS r FROM campaigns WHERE kind='bulkbuy' AND rate IS NOT NULL "
+            "  AND (start IS NULL OR start='' OR start <= ?) "
+            "  AND (end IS NULL OR end='' OR end >= ?)",
+            (now, now),
+        ).fetchone()
+        bundle_rate = row["r"] if row and row["r"] else None
         rows = conn.execute(
-            "SELECT workno, site, current_price, base_price, discount_rate FROM works "
-            "WHERE current_price IS NOT NULL"
+            "SELECT workno, site, current_price, base_price, discount_rate, bulkbuy_end "
+            "FROM works WHERE current_price IS NOT NULL"
         ).fetchall()
 
         updated = inserted = 0
@@ -67,8 +63,11 @@ def run(path=None, pool_path=None, dry_run=False):
                 (row["workno"], day),
             ).fetchone()
             base = existing["price"] if existing else row["current_price"]
+            in_bundle = (
+                bundle_rate if (bundle_rate and row["bulkbuy_end"] and row["bulkbuy_end"] >= now) else None
+            )
             eff, _rate = pricing.effective_price(
-                row["base_price"], row["discount_rate"], bundle.get(row["workno"])
+                row["base_price"], row["discount_rate"], in_bundle
             )
             after, _coupon = pool.best(row["workno"], eff or base, row["site"])
             if after is None:
