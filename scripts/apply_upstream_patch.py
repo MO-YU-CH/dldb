@@ -53,6 +53,7 @@ REPLACEMENTS = [
 # 从仓库直接覆盖到上游的文件
 COPIES = [
     ("lib/lowpos.js", "lib/lowpos.js"),
+    ("lib/couponlist.js", "lib/couponlist.js"),
     ("icons/icon-48.png", "icons/icon-48.png"),
     ("icons/icon-96.png", "icons/icon-96.png"),
     ("icons/icon-128.png", "icons/icon-128.png"),

@@ -39,6 +39,7 @@ FILES = [
     "lib/cart.js",
     "lib/history.js",
     "lib/lowpos.js",
+    "lib/couponlist.js",
 ]
 
 # 顺序敏感：先替换长串，避免短串先命中
@@ -78,8 +79,9 @@ def patch_manifest(text):
     for cs in data.get("content_scripts", []):
         js = cs.get("js") or []
         if any(p == "content.js" or p.endswith("/content.js") for p in js):
-            if "lib/lowpos.js" not in js:
-                js.append("lib/lowpos.js")
+            for extra in ("lib/lowpos.js", "lib/couponlist.js"):
+                if extra not in js:
+                    js.append(extra)
         cs["js"] = js
     return json.dumps(data, ensure_ascii=False, indent=2) + "\n"
 

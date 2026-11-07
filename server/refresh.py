@@ -25,7 +25,9 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
+import coupons
 import db
+import migrate
 
 JST = timezone(timedelta(hours=9))
 UA = "DLsiteCouponPlus/0.1 (price refresh; +https://dlsite.momo-yu.com/about)"
@@ -84,9 +86,11 @@ def refresh_one(conn, workno, site, delay):
         if got:
             price, base = got
             day = jst_today()
+            after, _coupon = coupons.load_cached(POOL_PATH).best(workno, price, site)
             conn.execute(
-                "INSERT OR REPLACE INTO price_samples(workno, day, price) VALUES(?,?,?)",
-                (workno, day, price),
+                "INSERT OR REPLACE INTO price_samples(workno, day, price, coupon_price) "
+                "VALUES(?,?,?,?)",
+                (workno, day, price, after),
             )
             agg = conn.execute(
                 "SELECT MIN(price) AS lo, MAX(price) AS hi, MIN(day) AS first, "
@@ -138,6 +142,7 @@ def main():
 
     print("PID=%d 间隔=%.1fs 库=%s" % (os.getpid(), args.delay, db.db_path()))
     conn = db.connect_rw()
+    migrate.apply(conn)
     pool_n = refresh_pool()
     print("券池：%s" % ("%d 张" % pool_n if pool_n else "未更新，沿用旧池"))
     last_pool = time.time()

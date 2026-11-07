@@ -26,6 +26,7 @@ const SOURCES = [
   ['extension/lib/history.js', '本机价格记录'],
   ['extension/content.js', '作品页面板'],
   ['extension/lib/lowpos.js', '历史低位判定（面板下方）'],
+  ['extension/lib/couponlist.js', '条件付きクーポン一覧'],
   ['extension/lib/cart.js', '购物车拆单优化器'],
   ['extension/cart-content.js', '购物车面板'],
   ['userscript/src/options-panel.js', '设置面板（Shadow DOM）'],

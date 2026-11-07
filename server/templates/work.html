@@ -35,6 +35,9 @@
     <div><dt>{{ T('couponAfter') }}</dt><dd class="good">¥{{ coupon_after|num }}
       {% if coupon %}<span class="dim">{{ coupon.coupon_name }}</span>{% endif %}</dd></div>
     {% endif %}
+    {% if coupon_min %}
+    <div><dt>{{ T('coupon_lowest') }}</dt><dd class="good">¥{{ coupon_min|num }} <span class="dim">({{ coupon_points }})</span></dd></div>
+    {% endif %}
     <div><dt>{{ T('work_lowest') }}</dt><dd class="good">¥{{ work.min_price|num }}{% if work.min_at %} <span class="dim">({{ work.min_at }})</span>{% endif %}</dd></div>
     <div><dt>{{ T('work_first_seen') }}</dt><dd>{{ work.first_seen or '-' }}</dd></div>
     <div><dt>{{ T('work_points') }}</dt><dd>{{ work.points|num }}</dd></div>
@@ -48,7 +51,7 @@
     {% else %}
     <span class="badge">{{ T('pos_pct', pct=pos.pct) }}</span>
     {% endif %}
-    <span class="dim">{{ T('work_lowest') }} ¥{{ pos.min|num }} · {{ T('work_points') }} {{ pos.points|num }}</span>
+    <span class="dim">{% if basis == 'coupon' %}{{ T('coupon_lowest') }}{% else %}{{ T('work_lowest') }}{% endif %} ¥{{ pos.min|num }} · {{ T('work_points') }} {{ pos.points|num }}</span>
   </p>
   {% endif %}
 

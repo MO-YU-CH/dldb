@@ -448,4 +448,78 @@ await testAsync('未达新低时给出百分位而非新低标签', async () => 
   assert.ok(text.includes('17%'), '百分位应为 17%（6 天里只有 1 天更贵）：' + text);
 });
 
+
+console.log('couponlist:');
+
+function loadCouponList(pool) {
+  const panel = makeEl('div');
+  panel.id = 'pdp-coupon-panel';
+  panel.isConnected = true;
+  const document = {
+    body: makeEl('body'),
+    documentElement: makeEl('html'),
+    createElement: (tag) => makeEl(tag),
+    getElementById: (id) => (id === 'pdp-coupon-panel' ? panel : null),
+    addEventListener() {},
+  };
+  const sandbox = {
+    console,
+    setTimeout,
+    document,
+    location: { href: 'https://www.dlsite.com/maniax/work/=/product_id/RJ1.html' },
+    MutationObserver: class {
+      observe() {}
+      disconnect() {}
+    },
+    PDP: {
+      i18n: { resolveLocale: () => 'zh-cn' },
+      history: { getSettings: async () => ({}) },
+      coupon: {
+        parseTarget: () => ({ store: 'dlsite', workno: 'RJ1', site: 'maniax' }),
+        readDomPrice: () => ({ value: 900, currency: 'JPY', raw: '900' }),
+        fetchCouponPool: async () => pool,
+        classify: (c) => c.__kind,
+      },
+    },
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(readFileSync(join(ROOT, 'extension/lib/couponlist.js'), 'utf8'), sandbox, {
+    filename: 'couponlist.js',
+  });
+  return { panel };
+}
+
+const POOL = [
+  { __kind: 'qualified', coupon_name: '対象作品30%OFF', discount_type: 'rate', discount: '30',
+    condition: { product_id: ['RJ1'] }, issue: { product_id: 'RJ000000' } },
+  { __kind: 'qualified', coupon_name: 'サークル限定', discount_type: 'price', discount: '300',
+    condition: { maker_id: ['RG01'] }, issue: { baitai: 1 } },
+  { __kind: 'qualified', coupon_name: '金額条件で落ちる', discount_type: 'rate', discount: '50',
+    condition: { price_sum: [5000] }, issue: {} },
+  { __kind: 'campaign', coupon_name: '誰でも', discount_type: 'rate', discount: '15',
+    condition: {}, issue: {} },
+  { __kind: 'newuser', coupon_name: '新規ユーザー', discount_type: 'rate', discount: '90',
+    condition: {}, issue: {} },
+];
+
+function deepText(node) {
+  const own = typeof node.textContent === 'string' ? node.textContent : '';
+  const kids = (node.children || []).map(deepText).join(' ');
+  return (own + ' ' + kids).trim();
+}
+
+await testAsync('只列条件券，且按可用性过滤', async () => {
+  const { panel } = loadCouponList(POOL);
+  await new Promise((r) => setTimeout(r, 80));
+  const block = panel.children.find((c) => c.id === 'pdp-couponlist');
+  assert.ok(block, '未挂上条件券区块');
+  const text = deepText(block);
+  assert.ok(text.includes('30%OFF'), '缺少 30%OFF：' + text);
+  assert.ok(text.includes('−¥300'), '缺少定额券：' + text);
+  assert.ok(!text.includes('50%OFF'), '金额门槛不满足的券不应出现');
+  assert.ok(!text.includes('90%OFF'), '新用户券不应出现');
+  assert.ok(text.includes('限定社团'), '缺少条件描述');
+});
+
 console.log(`\n${passed} 项通过`);

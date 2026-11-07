@@ -23,7 +23,7 @@
       <td><a href="{{ url_for('work', workno=w.workno) }}">{{ w.title or w.workno }}</a>
         <span class="meta">{{ w.workno }}{% if w.circle %} · {{ w.circle }}{% endif %}</span></td>
       <td class="num">¥{{ w.coupon_price|num }}</td>
-      <td class="num dim">¥{{ w.min_price|num }}</td>
+      <td class="num dim">¥{{ w.min_price|num }}{% if w.basis == 'coupon' %} · {{ T('coupon_lowest') }}{% endif %}</td>
       <td class="num good">−¥{{ w.gap|num }} <span class="dim">({{ w.gap_pct }}%)</span></td>
     </tr>
     {% endfor %}

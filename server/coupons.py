@@ -216,6 +216,20 @@ def load(path):
     return Pool(data if isinstance(data, list) else [])
 
 
+_cache = {"path": None, "mtime": None, "pool": None}
+
+
+def load_cached(path):
+    """按文件 mtime 热加载：券池换了，下一次调用即生效。"""
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        return Pool([])
+    if _cache["path"] != path or _cache["mtime"] != mtime:
+        _cache.update(path=path, mtime=mtime, pool=load(path))
+    return _cache["pool"]
+
+
 def main():
     """命令行自测：python server/coupons.py --work RJ159832 --price 275"""
     import argparse

@@ -59,9 +59,10 @@ CREATE TABLE IF NOT EXISTS works (
 );
 
 CREATE TABLE IF NOT EXISTS price_samples (
-    workno TEXT NOT NULL,
-    day    TEXT NOT NULL,
-    price  INTEGER NOT NULL,
+    workno      TEXT NOT NULL,
+    day         TEXT NOT NULL,
+    price       INTEGER NOT NULL,
+    coupon_price INTEGER,          -- 当日券后价；历史导入的数据没有，只能从上线后积累
     PRIMARY KEY (workno, day)
 ) WITHOUT ROWID;
 

@@ -43,7 +43,8 @@
     "rank_newlow": "券後価格が過去最安を更新した作品",
     "pos_low": "過去最安",
     "pos_pct": "過去の取引日の {pct}% より安い",
-    "couponAfter": "券後価格"
+    "couponAfter": "券後価格",
+    "coupon_lowest": "券後最安"
   },
   "en-us": {
     "tagline": "Daily price tracking for DLsite works, with full history and all-time lows.",
@@ -89,7 +90,8 @@
     "rank_newlow": "Works at an all-time low after coupons",
     "pos_low": "All-time low",
     "pos_pct": "Cheaper than {pct}% of recorded days",
-    "couponAfter": "After coupon"
+    "couponAfter": "After coupon",
+    "coupon_lowest": "Lowest after coupon"
   },
   "zh-cn": {
     "tagline": "每天记录 DLsite 作品价格，展示历史走势与最低价。",
@@ -135,7 +137,8 @@
     "rank_newlow": "券后价创历史新低的作品",
     "pos_low": "历史最低",
     "pos_pct": "比过去 {pct}% 的记录日更便宜",
-    "couponAfter": "券后价"
+    "couponAfter": "券后价",
+    "coupon_lowest": "券后最低"
   },
   "zh-tw": {
     "tagline": "每天記錄 DLsite 作品價格，呈現歷史走勢與最低價。",
@@ -181,7 +184,8 @@
     "rank_newlow": "券後價創歷史新低的作品",
     "pos_low": "歷史最低",
     "pos_pct": "比過去 {pct}% 的記錄日更便宜",
-    "couponAfter": "券後價"
+    "couponAfter": "券後價",
+    "coupon_lowest": "券後最低"
   },
   "ko-kr": {
     "tagline": "DLsite 작품 가격을 매일 기록하고 추이와 최저가를 보여 줍니다.",
@@ -227,7 +231,8 @@
     "rank_newlow": "쿠폰 적용 후 역대 최저가 작품",
     "pos_low": "역대 최저",
     "pos_pct": "기록된 날의 {pct}%보다 저렴",
-    "couponAfter": "쿠폰 적용가"
+    "couponAfter": "쿠폰 적용가",
+    "coupon_lowest": "쿠폰 적용 최저"
   },
   "es-es": {
     "tagline": "Seguimiento diario de precios de obras de DLsite, con historial y mínimos históricos.",
@@ -273,7 +278,8 @@
     "rank_newlow": "Obras en mínimo histórico tras cupones",
     "pos_low": "Mínimo histórico",
     "pos_pct": "Más barato que el {pct}% de los días registrados",
-    "couponAfter": "Precio con cupón"
+    "couponAfter": "Precio con cupón",
+    "coupon_lowest": "Mínimo con cupón"
   },
   "de-de": {
     "tagline": "Tägliche Preisverfolgung für DLsite-Werke mit Verlauf und Tiefstwerten.",
@@ -319,7 +325,8 @@
     "rank_newlow": "Werke auf Rekordtief nach Gutschein",
     "pos_low": "Rekordtief",
     "pos_pct": "Günstiger als {pct}% der erfassten Tage",
-    "couponAfter": "Preis nach Gutschein"
+    "couponAfter": "Preis nach Gutschein",
+    "coupon_lowest": "Tiefstpreis nach Gutschein"
   },
   "fr-fr": {
     "tagline": "Suivi quotidien des prix des œuvres DLsite, avec historique et plus bas niveaux.",
@@ -365,7 +372,8 @@
     "rank_newlow": "Œuvres au plus bas historique après coupon",
     "pos_low": "Plus bas historique",
     "pos_pct": "Moins cher que {pct}% des jours enregistrés",
-    "couponAfter": "Prix après coupon"
+    "couponAfter": "Prix après coupon",
+    "coupon_lowest": "Minimum après coupon"
   },
   "id-id": {
     "tagline": "Pelacakan harga karya DLsite setiap hari, lengkap dengan riwayat dan harga terendah.",
@@ -411,7 +419,8 @@
     "rank_newlow": "Karya pada harga terendah setelah kupon",
     "pos_low": "Terendah sepanjang catatan",
     "pos_pct": "Lebih murah dari {pct}% hari tercatat",
-    "couponAfter": "Harga setelah kupon"
+    "couponAfter": "Harga setelah kupon",
+    "coupon_lowest": "Terendah setelah kupon"
   },
   "it-it": {
     "tagline": "Monitoraggio giornaliero dei prezzi delle opere DLsite, con storico e minimi storici.",
@@ -457,7 +466,8 @@
     "rank_newlow": "Opere al minimo storico dopo coupon",
     "pos_low": "Minimo storico",
     "pos_pct": "Più economico del {pct}% dei giorni registrati",
-    "couponAfter": "Prezzo dopo coupon"
+    "couponAfter": "Prezzo dopo coupon",
+    "coupon_lowest": "Minimo dopo coupon"
   },
   "pt-br": {
     "tagline": "Acompanhamento diário dos preços das obras da DLsite, com histórico e mínimas.",
@@ -503,7 +513,8 @@
     "rank_newlow": "Obras no mínimo histórico após cupom",
     "pos_low": "Mínima histórica",
     "pos_pct": "Mais barato que {pct}% dos dias registrados",
-    "couponAfter": "Preço após cupom"
+    "couponAfter": "Preço após cupom",
+    "coupon_lowest": "Mínima após cupom"
   },
   "sv-se": {
     "tagline": "Daglig prisbevakning för DLsite-verk, med historik och lägstanivåer.",
@@ -549,7 +560,8 @@
     "rank_newlow": "Verk på lägsta nivå efter kupong",
     "pos_low": "Lägsta noterade",
     "pos_pct": "Billigare än {pct}% av de registrerade dagarna",
-    "couponAfter": "Pris efter kupong"
+    "couponAfter": "Pris efter kupong",
+    "coupon_lowest": "Lägsta efter kupong"
   },
   "th-th": {
     "tagline": "ติดตามราคาผลงาน DLsite ทุกวัน พร้อมประวัติราคาและราคาต่ำสุด",
@@ -595,7 +607,8 @@
     "rank_newlow": "ผลงานที่ราคาต่ำสุดเป็นประวัติการณ์หลังใช้คูปอง",
     "pos_low": "ต่ำสุดเป็นประวัติการณ์",
     "pos_pct": "ถูกกว่าวันที่บันทึกไว้ {pct}%",
-    "couponAfter": "ราคาหลังใช้คูปอง"
+    "couponAfter": "ราคาหลังใช้คูปอง",
+    "coupon_lowest": "ต่ำสุดหลังใช้คูปอง"
   },
   "vi-vn": {
     "tagline": "Theo dõi giá tác phẩm DLsite hằng ngày, kèm lịch sử và mức giá thấp nhất.",
@@ -641,6 +654,7 @@
     "rank_newlow": "Tác phẩm thấp nhất lịch sử sau khi áp coupon",
     "pos_low": "Thấp nhất lịch sử",
     "pos_pct": "Rẻ hơn {pct}% số ngày đã ghi nhận",
-    "couponAfter": "Giá sau coupon"
+    "couponAfter": "Giá sau coupon",
+    "coupon_lowest": "Thấp nhất sau coupon"
   }
 }

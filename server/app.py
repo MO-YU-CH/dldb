@@ -28,6 +28,7 @@ import charts
 import coupons
 import db
 import i18n
+import migrate
 import ondemand
 import pricing
 
@@ -57,15 +58,8 @@ _pool_cache = {"mtime": None, "pool": coupons.Pool([])}
 
 
 def get_pool():
-    """券池按文件 mtime 热加载：刷新任务换了券池，站点下一次请求就生效。"""
-    try:
-        mtime = os.path.getmtime(POOL_PATH)
-    except OSError:
-        return _pool_cache["pool"]
-    if _pool_cache["mtime"] != mtime:
-        _pool_cache["pool"] = coupons.load(POOL_PATH)
-        _pool_cache["mtime"] = mtime
-    return _pool_cache["pool"]
+    """券池按文件 mtime 热加载，实现见 coupons.load_cached。"""
+    return coupons.load_cached(POOL_PATH)
 
 
 _rank_cache = {"key": None, "rows": [], "at": 0.0}
@@ -79,16 +73,28 @@ def coupon_new_lows(conn, pool, limit=50, min_points=30):
         return _rank_cache["rows"]
 
     rows = conn.execute(
-        "SELECT workno, title, circle, site, current_price, min_price, points FROM works "
-        "WHERE points >= ? AND current_price IS NOT NULL AND min_price IS NOT NULL",
+        "SELECT w.workno, w.title, w.circle, w.site, w.current_price, w.min_price, w.points, "
+        "       c.cmin AS coupon_min, c.cn AS coupon_points "
+        "FROM works w LEFT JOIN ("
+        "  SELECT workno, MIN(coupon_price) AS cmin, COUNT(coupon_price) AS cn "
+        "  FROM price_samples WHERE coupon_price IS NOT NULL GROUP BY workno"
+        ") c ON c.workno = w.workno "
+        "WHERE w.points >= ? AND w.current_price IS NOT NULL AND w.min_price IS NOT NULL",
         (min_points,),
     ).fetchall()
 
     out = []
     for row in rows:
         after, coupon = pool.best(row["workno"], row["current_price"], row["site"])
-        # 严格低于历史最低才算「新低」；持平只是「处于最低」，不进榜
-        if after is None or after >= row["min_price"]:
+        if after is None:
+            continue
+        # 券后历史够 7 天就用券后最低做基准，否则退回本体最低
+        if row["coupon_points"] and row["coupon_points"] >= 7:
+            base, basis = row["coupon_min"], "coupon"
+        else:
+            base, basis = row["min_price"], "plain"
+        # 严格低于基准才算「新低」；持平只是「处于最低」，不进榜
+        if after >= base:
             continue
         out.append(
             {
@@ -96,14 +102,11 @@ def coupon_new_lows(conn, pool, limit=50, min_points=30):
                 "title": row["title"],
                 "circle": row["circle"],
                 "coupon_price": after,
-                "min_price": row["min_price"],
+                "min_price": base,
+                "basis": basis,
                 "points": row["points"],
-                "gap": row["min_price"] - after,
-                "gap_pct": (
-                    int(round((row["min_price"] - after) * 100.0 / row["min_price"]))
-                    if row["min_price"]
-                    else 0
-                ),
+                "gap": base - after,
+                "gap_pct": int(round((base - after) * 100.0 / base)) if base else 0,
                 "coupon_name": coupon.get("coupon_name") if coupon else None,
             }
         )
@@ -249,7 +252,15 @@ def create_app():
             coupon_after, coupon = get_pool().best(
                 workno, row["current_price"], row["site"]
             )
-        pos = pricing.position([h["price"] for h in history], coupon_after)
+        # 券后价历史只有上线后才开始积累；样本够 7 天才用它做判定
+        c_hist = db.get_coupon_history(g.db, workno)
+        c_prices = [r["coupon_price"] for r in c_hist]
+        if len(c_prices) >= 7:
+            pos = pricing.position(c_prices, coupon_after)
+            basis = "coupon"
+        else:
+            pos = pricing.position([h["price"] for h in history], coupon_after)
+            basis = "plain"
 
         return _render(
             "work.html",
@@ -263,6 +274,9 @@ def create_app():
             coupon_after=coupon_after,
             coupon=coupon,
             pos=pos,
+            basis=basis,
+            coupon_min=min(c_prices) if c_prices else None,
+            coupon_points=len(c_prices),
         )
 
     @app.get("/<locale>/search")
@@ -307,7 +321,14 @@ def create_app():
             coupon_after, coupon = get_pool().best(
                 workno, row["current_price"], row["site"]
             )
-        pos = pricing.position([h["price"] for h in history], coupon_after)
+        c_hist = db.get_coupon_history(g.db, workno)
+        c_prices = [r["coupon_price"] for r in c_hist]
+        if len(c_prices) >= 7:
+            pos = pricing.position(c_prices, coupon_after)
+            basis = "coupon"
+        else:
+            pos = pricing.position([h["price"] for h in history], coupon_after)
+            basis = "plain"
 
         payload = {
             "workId": workno,
@@ -339,8 +360,14 @@ def create_app():
                         "maxPrice": row["max_price"],
                         "firstSeenAt": row["first_seen"],
                         "points": row["points"],
+                        "couponMinPrice": min(c_prices) if c_prices else None,
+                        "couponPoints": len(c_prices),
+                        "couponBasis": basis,
                     },
                     "history": [[h["day"], h["price"]] for h in history],
+                    "couponHistory": [
+                        [r["day"], r["coupon_price"]] for r in c_hist
+                    ],
                 }
             ],
         }

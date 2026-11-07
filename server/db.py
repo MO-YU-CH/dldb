@@ -34,6 +34,15 @@ def get_work(conn, workno):
     return conn.execute("SELECT * FROM works WHERE workno = ?", (workno,)).fetchone()
 
 
+def get_coupon_history(conn, workno):
+    """只返回有券后价的日子。历史导入的数据没有这一列，所以长度通常远小于 get_history。"""
+    return conn.execute(
+        "SELECT day, coupon_price FROM price_samples "
+        "WHERE workno = ? AND coupon_price IS NOT NULL ORDER BY day",
+        (workno,),
+    ).fetchall()
+
+
 def get_history(conn, workno):
     return conn.execute(
         "SELECT day, price FROM price_samples WHERE workno = ? ORDER BY day", (workno,)
