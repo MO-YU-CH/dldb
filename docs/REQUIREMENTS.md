@@ -135,6 +135,6 @@ DLsite 不提供历史价格。我们依赖第三方公开接口（`price.maenoh
 
 ## 10. 代码与协议
 
-- 仓库：`<GitHub 地址>`
+- 仓库：<https://github.com/MO-YU-CH/dldb>
 - 协议：MIT
 - 免责：非 DLsite 官方项目；遵守 robots.txt；不抓登录态数据；不做购买行为

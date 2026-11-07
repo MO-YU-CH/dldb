@@ -46,6 +46,8 @@ python scripts/package_extension.py      # 校验引用与语法后打 zip
 想把数据采集做得更快？`docs/REQUIREMENTS.md` 记录了实测的接口、规模与限制（含 maniax 43 万件、
 `Crawl-delay: 10` 导致的 50 天/轮），以及目前没走通的几条路。有更好的办法欢迎开 issue。
 
+代码仓库：<https://github.com/MO-YU-CH/dldb>
+
 ## 油猴脚本
 
 **一键安装**：<https://dlsite.momo-yu.com/dlsite-coupon-plus.user.js?v=2.1.0>（Tampermonkey 会识别 `.user.js` 后缀并弹出安装页）
