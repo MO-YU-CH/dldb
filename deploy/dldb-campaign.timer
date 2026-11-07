@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily sale-campaign crawl (03:40 JST)
+
+[Timer]
+# 服务器时区 UTC，03:40 JST = 18:40 UTC 前一天
+OnCalendar=*-*-* 18:40:00 UTC
+Persistent=true
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target

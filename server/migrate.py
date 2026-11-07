@@ -8,6 +8,17 @@ import sqlite3
 
 import db
 
+# 新建表也放这里，保证老库升级后结构一致
+TABLES = """
+CREATE TABLE IF NOT EXISTS campaigns (
+    key TEXT PRIMARY KEY, site TEXT, start TEXT, end TEXT, updated_at TEXT
+);
+CREATE TABLE IF NOT EXISTS campaign_works (
+    key TEXT NOT NULL, workno TEXT NOT NULL, day TEXT, price INTEGER, base INTEGER,
+    PRIMARY KEY (key, workno)
+) WITHOUT ROWID;
+"""
+
 COLUMNS = [
     ("price_samples", "coupon_price", "INTEGER"),
     ("price_samples", "carried", "INTEGER NOT NULL DEFAULT 0"),
@@ -19,6 +30,7 @@ def apply(conn=None):
     if own:
         conn = db.connect_rw()
     try:
+        conn.executescript(TABLES)
         for table, column, ctype in COLUMNS:
             existing = {row[1] for row in conn.execute("PRAGMA table_info(%s)" % table)}
             if column not in existing:

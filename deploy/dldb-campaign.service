@@ -1,0 +1,19 @@
+[Unit]
+Description=Crawl DLsite sale campaigns (50 works per request)
+After=dldb.service
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/dldb/server
+Environment=DLDB_PATH=/home/ubuntu/dldb/server/data/dlsite.db
+# 每页 50 件，400 页 ≈ 2 万件；单页间隔 10 秒（robots Crawl-delay）
+ExecStart=/home/ubuntu/dldb/server/.venv/bin/python campaigns.py --all --pages 400 --save
+TimeoutStartSec=7200
+Nice=15
+IOSchedulingClass=idle
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/home/ubuntu/dldb/server/data

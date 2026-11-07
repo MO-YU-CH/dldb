@@ -67,6 +67,23 @@ CREATE TABLE IF NOT EXISTS price_samples (
     PRIMARY KEY (workno, day)
 ) WITHOUT ROWID;
 
+CREATE TABLE IF NOT EXISTS campaigns (
+    key        TEXT PRIMARY KEY,
+    site       TEXT,
+    start      TEXT,
+    end        TEXT,
+    updated_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS campaign_works (
+    key    TEXT NOT NULL,
+    workno TEXT NOT NULL,
+    day    TEXT,
+    price  INTEGER,
+    base   INTEGER,
+    PRIMARY KEY (key, workno)
+) WITHOUT ROWID;
+
 CREATE TABLE IF NOT EXISTS crawl_queue (
     page_url  TEXT PRIMARY KEY,
     workno    TEXT,

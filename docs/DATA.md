@@ -131,19 +131,50 @@ api/lookup 或 /works/<id> 未命中
 `carried` 表示「价格是沿用上次实测值，不是当天观测」。价格图表、`min/max/points` 只认
 `carried = 0`；券后历史两者都认（券后价本身是按当天价格算出来的，仍然有效）。
 
-## 9. 活动与折扣的有效期（调研结论）
+## 9. 活动（セール）数据
 
-`product.json` 里确实有折扣窗口：
+### 接口（都是从 app.js / 页面结构里找出来的，实测可用）
 
-| 字段 | 含义 |
-| --- | --- |
-| `campaign_id / campaign_start_date / campaign_end_date` | 参加的活动及起止时间 |
-| `timesale_start_date / timesale_end_date / timesale_price` | 限时特卖 |
-| `limit_sale_id / limit_start_date / limit_end_date` | 限定特卖 |
+| 用途 | 端点 | 实测 |
+| --- | --- | --- |
+| 活动索引 | `/{site}/api/=/campaignBanner.json?cdn_cache=1` | 当前 4 条，含 `start/end/url`，key 在 url 里 |
+| 活动商品 | `/{site}/campaign/discount?key=<key>&page=N` | 服务端分页，**50 件/页**；第 1/30/150 页零重合 |
+| 价格核对 | `/{site}/api/=/product.json?workno=` | 抽样 5 件，活动页价格与单件接口 **5/5 一致** |
 
-**但没有「活动 → 参加作品」的枚举入口**：`/maniax/campaign/`、`/maniax/sale/` 均 404，
-只有 `campaign/discount?key=<活动key>` 这种具体页；活动 key 只能从首页（只露主推）或作品页里发现。
-所以「活动结束后回扫」可做，「提前知道新活动」不可行——除非那件作品正好被扫到。
+`campaignBanner` 里的条目不一定带 key（纯宣传页），没有 key 的直接跳过。
+
+### 为什么值得做
+
+活动页每张卡片同时带作品号、标题、现价、定価（划掉价在 `span.strike` 里）。
+**一次请求 = 50 件作品的价格更新**，而单件接口是 1 请求/件，效率差 50 倍。
+
+### 已实现
+
+`server/campaigns.py`：
+
+```
+--banners            列出活动中 key 与起止
+--key <key> --pages N [--verify K] [--save]
+--all --pages N --save    扫描 campaignBanner 里的全部活动，跳过已结束的
+```
+
+落到两张表：
+
+```sql
+campaigns(key, site, start, end, updated_at)
+campaign_works(key, workno, day, price, base)   -- 最近一次看到的参加状态
+```
+
+活动页读到的价格是**真实观测**，写 `price_samples` 时 `carried=0`，并调用
+`db.recompute_stats()` 重算 min/max/points。
+
+定时：`dldb-campaign.timer` 每天 03:40 JST，单页间隔 10 秒，最多 400 页。
+
+### 已知限制
+
+- `campaign/bulkbuy/` 是套装活动页，结构不同，当前解析到 0 件（不影响单品折扣价）
+- 活动页没有总件数字段，只能翻到空页或重复页为止，因此设了页数上限
+- 只能发现 `campaignBanner` 里露出的活动；没有 banner 的活动仍要靠单件扫描撞见
 
 ## 10. 已知问题
 

@@ -49,6 +49,26 @@ def get_work(conn, workno):
     return conn.execute("SELECT * FROM works WHERE workno = ?", (workno,)).fetchone()
 
 
+def recompute_stats(conn, workno):
+    """按 price_samples 里 carried=0 的点重算 min/max/points。refresh 与活动抓取共用。"""
+    agg = conn.execute(
+        "SELECT MIN(price) AS lo, MAX(price) AS hi, MIN(day) AS first, "
+        "COUNT(*) AS n FROM price_samples WHERE workno=? AND carried=0",
+        (workno,),
+    ).fetchone()
+    if not agg or not agg["n"]:
+        return
+    min_day = conn.execute(
+        "SELECT day FROM price_samples WHERE workno=? AND carried=0 "
+        "ORDER BY price ASC, day ASC LIMIT 1",
+        (workno,),
+    ).fetchone()["day"]
+    conn.execute(
+        "UPDATE works SET min_price=?, min_at=?, max_price=?, first_seen=?, points=? WHERE workno=?",
+        (agg["lo"], min_day, agg["hi"], agg["first"], agg["n"], workno),
+    )
+
+
 def get_coupon_history(conn, workno):
     """只返回有券后价的日子。历史导入的数据没有这一列，所以长度通常远小于 get_history。"""
     return conn.execute(
