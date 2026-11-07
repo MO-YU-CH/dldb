@@ -64,7 +64,10 @@ def run(path=None, pool_path=None, dry_run=False):
             )
             if active and row["bulkbuy_price"]:
                 eff = row["bulkbuy_price"]
-            after, _coupon = pool.best(row["workno"], eff or base, row["site"])
+            # 套装价是「凑够 N 件」才成立的价格；当天实测价若更低（闪购/临时降价），
+            # 应当以实测价为准，否则会把更便宜的价格算成更贵。
+            candidates = [v for v in (base, eff) if v]
+            after, _coupon = pool.best(row["workno"], min(candidates), row["site"])
             if after is None:
                 continue
             if existing:

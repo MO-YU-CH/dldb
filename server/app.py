@@ -125,8 +125,11 @@ def coupon_new_lows(conn, pool, limit=50, min_points=30):
 
     out = []
     for row in rows:
-        eff_price, _rate, _info = effective_for(row)
-        after, coupon = pool.best(row["workno"], eff_price or row["current_price"], row["site"])
+        # 套装价要凑够 N 件才成立，和「单件历史新低」不可比，不参与榜单。
+        # 作品页仍会显示套装价，只是标注「N 点以上」。
+        if bundle_info(row):
+            continue
+        after, coupon = pool.best(row["workno"], row["current_price"], row["site"])
         if after is None:
             continue
         # 券后历史够 7 天就用券后最低做基准，否则退回本体最低

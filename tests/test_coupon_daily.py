@@ -78,6 +78,23 @@ class TestCouponDaily(unittest.TestCase):
         self.assertEqual(row["price"], 580, "已有价格不能被回填覆盖")
         self.assertEqual(row["coupon_price"], 435)  # 580 × 75%
 
+    def test_uses_lower_of_observed_and_bundle(self):
+        # 套装价 900 高于当天实测 500（闪购），券必须作用在 500 上
+        conn = sqlite3.connect(self.db)
+        conn.execute(
+            "UPDATE works SET base_price=1000, discount_rate=60, "
+            "bulkbuy_rate=60, bulkbuy_price=900, bulkbuy_end='2099-01-01 00:00:00' "
+            "WHERE workno='RJ1'"
+        )
+        conn.execute("UPDATE works SET current_price=500 WHERE workno='RJ1'")
+        conn.commit()
+        conn.close()
+
+        coupon_daily.run(path=self.db, pool_path=self.pool_path)
+        row = [r for r in self.rows() if r["workno"] == "RJ1"][0]
+        self.assertEqual(row["price"], 500)
+        self.assertEqual(row["coupon_price"], 375, "应基于更低的实测价 500 而非套装价 900")
+
     def test_empty_pool_is_noop(self):
         empty = os.path.join(self.tmp, "empty.json")
         with open(empty, "w", encoding="utf-8") as fh:

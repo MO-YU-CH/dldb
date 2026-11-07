@@ -131,35 +131,49 @@ def ingest(workno, path=None):
     if _negative.get(workno, 0) > time.time() - NEGATIVE_TTL:
         return False
 
-    conn = db.connect_rw() if path is None else _connect(path)
+    def _open():
+        return db.connect_rw() if path is None else _connect(path)
+
+    # 1) 只读检查后立刻关连接：不能在网络请求期间握着写事务，
+    #    否则 refresh / coupon_daily 会被一个 12 秒的 HTTP 请求堵住。
+    conn = _open()
     try:
         if conn.execute("SELECT 1 FROM works WHERE workno=?", (workno,)).fetchone():
             return False  # 别的请求刚写进去
+    finally:
+        conn.close()
 
-        with _lock:
-            wait = _last_call[0] + MIN_INTERVAL - time.time()
-            if wait > 0:
-                time.sleep(wait)
-            _last_call[0] = time.time()
-            site = _site_for(workno)
-            try:
-                item = _fetch(workno, site)
-            except urllib.error.HTTPError as exc:
-                if exc.code == 404 and site != "maniax":
-                    try:
-                        item = _fetch(workno, "maniax")
-                    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError, OSError):
-                        item = None
-                else:
+    # 2) 网络请求（无数据库连接）
+    with _lock:
+        wait = _last_call[0] + MIN_INTERVAL - time.time()
+        if wait > 0:
+            time.sleep(wait)
+        _last_call[0] = time.time()
+        site = _site_for(workno)
+        try:
+            item = _fetch(workno, site)
+        except urllib.error.HTTPError as exc:
+            if exc.code == 404 and site != "maniax":
+                try:
+                    item = _fetch(workno, "maniax")
+                except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError, OSError):
                     item = None
-            except (urllib.error.URLError, TimeoutError, ValueError, OSError):
+            else:
                 item = None
+        except (urllib.error.URLError, TimeoutError, ValueError, OSError):
+            item = None
+        history = _fetch_history(workno) if item else []
 
-        if not item:
-            _negative[workno] = time.time()
+    if not item:
+        _negative[workno] = time.time()
+        return False
+
+    # 3) 落库：短事务，写完立刻提交
+    day = datetime.now(JST).strftime("%Y-%m-%d")
+    conn = _open()
+    try:
+        if conn.execute("SELECT 1 FROM works WHERE workno=?", (workno,)).fetchone():
             return False
-
-        day = datetime.now(JST).strftime("%Y-%m-%d")
         conn.execute(
             """
             INSERT INTO works(workno, title, circle, site, current_price, base_price,
@@ -190,8 +204,7 @@ def ingest(workno, path=None):
             "INSERT OR REPLACE INTO price_samples(workno, day, price, carried) VALUES(?,?,?,0)",
             (workno, day, item["price"]),
         )
-        # 顺手把历史序列补上：插件要的是「历史最低」，只有今天一个点等于没有
-        history = _fetch_history(workno)
+        # 顺手补历史序列：插件要的是「历史最低」，只有今天一个点等于没有
         for h_day, h_price in history:
             if h_day == day:
                 continue
@@ -201,10 +214,11 @@ def ingest(workno, path=None):
             )
         db.recompute_stats(conn, workno)
         conn.commit()
-        _daily["count"] += 1
-        return True
     finally:
         conn.close()
+
+    _daily["count"] += 1
+    return True
 
 
 def _connect(path):
