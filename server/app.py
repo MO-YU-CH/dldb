@@ -63,6 +63,7 @@ def get_pool():
 
 
 _rank_cache = {"key": None, "rows": [], "at": 0.0}
+_health_cache = {"at": 0.0, "data": None}
 RANK_TTL = 300
 
 
@@ -395,11 +396,53 @@ def create_app():
 
     @app.get("/healthz")
     def healthz():
+        """健康与容量信息。聚合查询较慢，缓存 60 秒。"""
+        cached = _health_cache.get("data")
+        if cached and time.time() - _health_cache["at"] < 60:
+            return jsonify(cached)
+
         try:
-            g.db.execute("SELECT 1").fetchone()
+            row = g.db.execute(
+                "SELECT (SELECT COUNT(*) FROM works) AS works, "
+                "(SELECT COUNT(*) FROM price_samples) AS samples, "
+                "(SELECT COUNT(*) FROM price_samples WHERE coupon_price IS NOT NULL) AS coupon_samples, "
+                "(SELECT MAX(day) FROM price_samples) AS last_day"
+            ).fetchone()
         except sqlite3.Error:
             return jsonify({"ok": False}), 503
-        return jsonify({"ok": True, "works": db.count_works(g.db)})
+
+        path = db.db_path()
+        size = os.path.getsize(path) if os.path.exists(path) else 0
+        wal_path = path + "-wal"
+        wal = os.path.getsize(wal_path) if os.path.exists(wal_path) else 0
+
+        backups = {"count": 0, "latest": None, "age_hours": None}
+        folder = os.path.join(os.path.dirname(path), "backups")
+        if os.path.isdir(folder):
+            files = sorted(
+                (f for f in os.listdir(folder) if f.startswith("dlsite-") and f.endswith(".db")),
+                reverse=True,
+            )
+            if files:
+                newest = os.path.join(folder, files[0])
+                backups = {
+                    "count": len(files),
+                    "latest": files[0],
+                    "age_hours": round((time.time() - os.path.getmtime(newest)) / 3600.0, 1),
+                }
+
+        data = {
+            "ok": True,
+            "works": row["works"],
+            "samples": row["samples"],
+            "coupon_samples": row["coupon_samples"],
+            "last_day": row["last_day"],
+            "db_mb": round(size / 1024.0 / 1024.0, 1),
+            "wal_mb": round(wal / 1024.0 / 1024.0, 1),
+            "backups": backups,
+        }
+        _health_cache.update({"at": time.time(), "data": data})
+        return jsonify(data)
 
     # ---------------------------------------------------------------- 爬虫
 

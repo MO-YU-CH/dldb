@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily backup of the price database (04:30 JST)
+
+[Timer]
+# 服务器时区是 UTC，04:30 JST = 19:30 UTC
+OnCalendar=*-*-* 19:30:00 UTC
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

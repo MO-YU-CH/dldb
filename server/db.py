@@ -16,10 +16,24 @@ def db_path():
     return os.environ.get("DLDB_PATH", DEFAULT_DB)
 
 
+# 每个连接独立的页缓存（KiB）。waitress 4 线程 × 16MB = 最坏 64MB，
+# 对 909MB 的机器是安全值；实测读点查本来就只有 0.05ms，不需要更大。
+CACHE_KIB = int(os.environ.get("DLDB_CACHE_KIB", "16384"))
+
+
+def _tune(conn, write=False):
+    conn.execute("PRAGMA cache_size=-%d" % CACHE_KIB)
+    if write:
+        # WAL 下 NORMAL 的边界是「断电可能丢最后一个事务」，价格记录可以接受；
+        # FULL 会让每 10 秒一次的刷新都多一次 fsync。
+        conn.execute("PRAGMA synchronous=NORMAL")
+
+
 def connect():
     conn = sqlite3.connect(db_path(), timeout=15)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA query_only=ON")
+    _tune(conn)
     return conn
 
 
@@ -27,6 +41,7 @@ def connect_rw():
     conn = sqlite3.connect(db_path(), timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
+    _tune(conn, write=True)
     return conn
 
 

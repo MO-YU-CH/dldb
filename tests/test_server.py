@@ -128,6 +128,13 @@ class TestPages(unittest.TestCase):
         ),
         "油猴产物未构建",
     )
+    def test_healthz_shape(self):
+        data = self.client.get("/healthz").get_json()
+        self.assertTrue(data["ok"])
+        for key in ("works", "samples", "coupon_samples", "last_day", "db_mb", "wal_mb", "backups"):
+            self.assertIn(key, data)
+        self.assertIn("count", data["backups"])
+
     def test_userscript_served(self):
         res = self.client.get("/dlsite-coupon-plus.user.js")
         self.assertEqual(res.status_code, 200)
