@@ -70,8 +70,11 @@ CREATE TABLE IF NOT EXISTS price_samples (
 CREATE TABLE IF NOT EXISTS campaigns (
     key        TEXT PRIMARY KEY,
     site       TEXT,
+    kind       TEXT,      -- discount（单品折扣）/ bulkbuy（套装、自选组合）
     start      TEXT,
     end        TEXT,
+    min_items  INTEGER,   -- 套装：凑几件
+    rate       INTEGER,   -- 套装：折扣率
     updated_at TEXT
 );
 

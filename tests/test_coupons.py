@@ -156,6 +156,27 @@ class TestPool(unittest.TestCase):
         self.assertEqual(pool.best("RJ2", 700)[0], 700)
 
 
+class TestEffectivePrice(unittest.TestCase):
+    def test_bundle_wins(self):
+        # 单品 50% + 套装 60% → 只算 60%（DLsite 不叠加）
+        self.assertEqual(pricing.effective_price(1000, 50, 60), (400, 60))
+
+    def test_item_wins(self):
+        self.assertEqual(pricing.effective_price(1000, 70, 60), (300, 70))
+
+    def test_bundle_only(self):
+        self.assertEqual(pricing.effective_price(880, None, 60), (352, 60))
+
+    def test_item_only(self):
+        self.assertEqual(pricing.effective_price(1000, 30, None), (700, 30))
+
+    def test_no_discount(self):
+        self.assertEqual(pricing.effective_price(1000, None, None), (1000, 0))
+
+    def test_missing_base(self):
+        self.assertEqual(pricing.effective_price(None, 50, 60), (None, None))
+
+
 class TestPosition(unittest.TestCase):
     # 样本不足 5 天时 pct 一律为 None（新作品的分位数没有意义）
     SERIES = [100, 200, 300, 400, 500, 600]

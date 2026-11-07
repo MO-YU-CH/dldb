@@ -8,6 +8,23 @@
 """
 
 
+def effective_price(base_price, item_rate=None, bundle_rate=None):
+    """套装折扣与单品折扣取较大者（DLsite 不叠加），返回 (有效价, 生效折扣率)。
+
+    base_price  : 定価（official_price）
+    item_rate   : 当前单品折扣率（0-100）
+    bundle_rate : 套装活动折扣率（0-100），如「3本以上60%OFF」→ 60
+
+    实测口径：单品 50% + 套装 60% → 只算 60%，不是 80%。
+    """
+    if base_price is None:
+        return None, None
+    rates = [r for r in (item_rate, bundle_rate) if r is not None]
+    rate = max(rates) if rates else 0
+    rate = max(0, min(100, int(rate)))
+    return int(round(base_price * (100 - rate) / 100.0)), rate
+
+
 def position(prices, current, min_points=5):
     """返回当前价在历史中的位置。
 

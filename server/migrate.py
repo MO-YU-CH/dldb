@@ -11,7 +11,8 @@ import db
 # 新建表也放这里，保证老库升级后结构一致
 TABLES = """
 CREATE TABLE IF NOT EXISTS campaigns (
-    key TEXT PRIMARY KEY, site TEXT, start TEXT, end TEXT, updated_at TEXT
+    key TEXT PRIMARY KEY, site TEXT, kind TEXT, start TEXT, end TEXT,
+    min_items INTEGER, rate INTEGER, updated_at TEXT
 );
 CREATE TABLE IF NOT EXISTS campaign_works (
     key TEXT NOT NULL, workno TEXT NOT NULL, day TEXT, price INTEGER, base INTEGER,
@@ -22,6 +23,9 @@ CREATE TABLE IF NOT EXISTS campaign_works (
 COLUMNS = [
     ("price_samples", "coupon_price", "INTEGER"),
     ("price_samples", "carried", "INTEGER NOT NULL DEFAULT 0"),
+    ("campaigns", "kind", "TEXT"),
+    ("campaigns", "min_items", "INTEGER"),
+    ("campaigns", "rate", "INTEGER"),
 ]
 
 

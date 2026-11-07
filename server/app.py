@@ -9,7 +9,7 @@ import os
 import secrets
 import sqlite3
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from flask import (
     Flask,
@@ -57,6 +57,25 @@ POOL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "co
 _pool_cache = {"mtime": None, "pool": coupons.Pool([])}
 
 
+def bundle_rates(conn):
+    """进行中的套装活动 → {workno: 最大折扣率}。缓存 5 分钟。"""
+    if _bundle_cache["map"] and time.time() - _bundle_cache["at"] < BUNDLE_TTL:
+        return _bundle_cache["map"]
+    now = datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%dT%H:%M:%S")
+    rows = conn.execute(
+        "SELECT cw.workno AS workno, MAX(c.rate) AS rate "
+        "FROM campaign_works cw JOIN campaigns c ON c.key = cw.key "
+        "WHERE c.kind='bulkbuy' AND c.rate IS NOT NULL "
+        "  AND (c.start IS NULL OR c.start='' OR c.start <= ?) "
+        "  AND (c.end IS NULL OR c.end='' OR c.end >= ?) "
+        "GROUP BY cw.workno",
+        (now, now),
+    ).fetchall()
+    mapping = {r["workno"]: r["rate"] for r in rows}
+    _bundle_cache.update({"at": time.time(), "map": mapping})
+    return mapping
+
+
 def get_pool():
     """券池按文件 mtime 热加载，实现见 coupons.load_cached。"""
     return coupons.load_cached(POOL_PATH)
@@ -64,6 +83,8 @@ def get_pool():
 
 _rank_cache = {"key": None, "rows": [], "at": 0.0}
 _health_cache = {"at": 0.0, "data": None}
+_bundle_cache = {"at": 0.0, "map": {}}
+BUNDLE_TTL = 300
 RANK_TTL = 300
 
 
@@ -73,8 +94,10 @@ def coupon_new_lows(conn, pool, limit=50, min_points=30):
     if _rank_cache["key"] == key:
         return _rank_cache["rows"]
 
+    bmap = bundle_rates(conn)
     rows = conn.execute(
         "SELECT w.workno, w.title, w.circle, w.site, w.current_price, w.min_price, w.points, "
+        "       w.base_price, w.discount_rate, "
         "       c.cmin AS coupon_min, c.cn AS coupon_points "
         "FROM works w LEFT JOIN ("
         "  SELECT workno, MIN(coupon_price) AS cmin, COUNT(coupon_price) AS cn "
@@ -86,7 +109,10 @@ def coupon_new_lows(conn, pool, limit=50, min_points=30):
 
     out = []
     for row in rows:
-        after, coupon = pool.best(row["workno"], row["current_price"], row["site"])
+        eff_price, _ = pricing.effective_price(
+            row["base_price"], row["discount_rate"], bmap.get(row["workno"])
+        )
+        after, coupon = pool.best(row["workno"], eff_price or row["current_price"], row["site"])
         if after is None:
             continue
         # 券后历史够 7 天就用券后最低做基准，否则退回本体最低
@@ -248,11 +274,13 @@ def create_app():
         )
 
         # 券后价与历史定位：券是公开券池口径，比用户个人持券保守
+        bundle_rate = bundle_rates(g.db).get(workno)
+        eff_price, eff_rate = pricing.effective_price(
+            row["base_price"], row["discount_rate"], bundle_rate
+        )
         coupon_after, coupon = (None, None)
-        if row["current_price"]:
-            coupon_after, coupon = get_pool().best(
-                workno, row["current_price"], row["site"]
-            )
+        if eff_price:
+            coupon_after, coupon = get_pool().best(workno, eff_price, row["site"])
         # 券后价历史只有上线后才开始积累；样本够 7 天才用它做判定
         c_hist = db.get_coupon_history(g.db, workno)
         c_prices = [r["coupon_price"] for r in c_hist]
@@ -276,6 +304,9 @@ def create_app():
             coupon=coupon,
             pos=pos,
             basis=basis,
+            eff_price=eff_price,
+            eff_rate=eff_rate,
+            bundle_rate=bundle_rate,
             coupon_min=min(c_prices) if c_prices else None,
             coupon_points=len(c_prices),
         )
@@ -317,11 +348,13 @@ def create_app():
             return jsonify({"error": "not found", "workId": workno}), 404
 
         history = db.get_history(g.db, workno)
+        bundle_rate = bundle_rates(g.db).get(workno)
+        eff_price, eff_rate = pricing.effective_price(
+            row["base_price"], row["discount_rate"], bundle_rate
+        )
         coupon_after, coupon = (None, None)
-        if row["current_price"]:
-            coupon_after, coupon = get_pool().best(
-                workno, row["current_price"], row["site"]
-            )
+        if eff_price:
+            coupon_after, coupon = get_pool().best(workno, eff_price, row["site"])
         c_hist = db.get_coupon_history(g.db, workno)
         c_prices = [r["coupon_price"] for r in c_hist]
         if len(c_prices) >= 7:
@@ -351,6 +384,9 @@ def create_app():
                             and row["current_price"] < row["base_price"]
                         ),
                         "couponRate": None,
+                        "bundleRate": bundle_rate,
+                        "effectivePrice": eff_price,
+                        "effectiveRate": eff_rate,
                         "couponPrice": coupon_after,
                         "couponName": coupon.get("coupon_name") if coupon else None,
                         "recordedAt": history[-1]["day"] if history else None,

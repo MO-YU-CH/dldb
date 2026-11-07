@@ -65,6 +65,31 @@ class TestParse(unittest.TestCase):
         self.assertEqual(rows[0]["key"], "sale20261030anniv")
 
 
+BULK_FIXTURE = """
+<div><a href="https://www.dlsite.com/girls/work/=/product_id/RJ01258201.html">セフレの市原</a>
+<dd class="maker_name"><a href="/x">きゃぺふろ</a></dd>
+<dd class="work_price_wrap"><span class="work_price discount">616<i>円</i></span>
+<span class="strike">880<i>円</i></span></dd></div>
+<div><a href="https://www.dlsite.com/maniax/work/=/product_id/RJ01067308.html">別の作品</a>
+<dd class="work_price_wrap"><span class="work_price discount">770<i>円</i></span></dd></div>
+<h1>創業祭記念 3本以上60%OFFセット割</h1>
+"""
+
+
+class TestBulkbuy(unittest.TestCase):
+    def test_parse_cards(self):
+        cards = campaigns.parse_bulkbuy(BULK_FIXTURE)
+        self.assertEqual(len(cards), 2)
+        self.assertEqual(cards[0]["workno"], "RJ01258201")
+        self.assertEqual(cards[0]["price"], 616)
+        self.assertEqual(cards[0]["base"], 880)
+        self.assertIsNone(cards[1]["base"], "没有定価时不应瞎填")
+
+    def test_parse_rule(self):
+        self.assertEqual(campaigns.parse_bulkbuy_rule(BULK_FIXTURE), (3, 60))
+        self.assertEqual(campaigns.parse_bulkbuy_rule("<html></html>"), (None, None))
+
+
 class TestCrawlAndSave(unittest.TestCase):
     def setUp(self):
         self.tmp = __import__("tempfile").mkdtemp(prefix="dldb-camp-")
@@ -101,6 +126,10 @@ class TestCrawlAndSave(unittest.TestCase):
         self.assertEqual(camp["end"], "2026-11-12")
         members = conn.execute("SELECT COUNT(*) FROM campaign_works WHERE key='sale1'").fetchone()[0]
         self.assertEqual(members, 2)
+
+        # 从卡片价与定価反推的单品折扣（792/990 → 20%）要落库，否则套装比对会丢单品折扣
+        rate = conn.execute("SELECT discount_rate FROM works WHERE workno='RJ01345621'").fetchone()[0]
+        self.assertEqual(rate, 20)
         conn.close()
 
 

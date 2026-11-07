@@ -72,6 +72,63 @@ def parse_cards(html):
     return cards
 
 
+BULK_PRICE = re.compile(r'work_price[^"]*">\s*(\d+)\s*<i>円')
+BULK_STRIKE = re.compile(r'class="strike">\s*(\d+)\s*<i>円')
+BULK_RULE = re.compile(r"(\d+)\s*本以上[^\d<]{0,12}(\d{1,2})\s*%OFF")
+
+
+def parse_bulkbuy(html):
+    """套装页卡片：结构是 work_price[ discount] + strike，没有 title 属性。"""
+    starts = [m.start() for m in re.finditer(r"/work/=/product_id/([A-Z]{2}\d+)\.html", html)]
+    cards, seen = [], set()
+    for i, pos in enumerate(starts):
+        seg = html[pos:(starts[i + 1] if i + 1 < len(starts) else pos + 2500)]
+        workno = re.search(r"product_id/([A-Z]{2}\d+)", seg).group(1)
+        if workno in seen:
+            continue
+        price = BULK_PRICE.search(seg)
+        if not price:
+            continue
+        seen.add(workno)
+        strike = BULK_STRIKE.search(seg)
+        cards.append({"workno": workno, "title": "", "price": int(price.group(1)),
+                      "base": int(strike.group(1)) if strike else None})
+    return cards
+
+
+def parse_bulkbuy_rule(html):
+    """「3本以上60%OFF」→ (3, 60)。拿不到返回 (None, None)。"""
+    m = BULK_RULE.search(html)
+    if not m:
+        return None, None
+    return int(m.group(1)), int(m.group(2))
+
+
+def crawl_bulkbuy(site, key, max_pages=400, page_delay=DELAY):
+    seen, pages = {}, 0
+    min_items = rate = None
+    for page in range(1, max_pages + 1):
+        url = "https://www.dlsite.com/%s/campaign/bulkbuy/=/key/%s/" % (site, key)
+        if page > 1:
+            url += "?page=%d" % page
+        html = _get(url)
+        if page == 1:
+            min_items, rate = parse_bulkbuy_rule(html)
+        cards = parse_bulkbuy(html)
+        if not cards:
+            break
+        pages += 1
+        fresh = 0
+        for card in cards:
+            if card["workno"] not in seen:
+                seen[card["workno"]] = card
+                fresh += 1
+        if fresh == 0:
+            break
+        time.sleep(page_delay + page_delay * 0.2)
+    return list(seen.values()), pages, min_items, rate
+
+
 def banners(site="maniax"):
     """活动索引。key 从 url 里解析；拿不到 key 的条目跳过（多为纯宣传页）。"""
     out = []
@@ -128,15 +185,18 @@ def verify(site, cards, sample=5, delay=DELAY):
     return bad
 
 
-def save(conn, site, key, start, end, cards, pool=None):
+def save(conn, site, key, start, end, cards, pool=None, kind="discount", min_items=None, rate=None):
     """落库：活动元数据、参加作品、以及当天价格（carried=0，这是真实观测）。"""
     day = datetime.now(JST).strftime("%Y-%m-%d")
     conn.execute(
-        "INSERT INTO campaigns(key, site, start, end, updated_at) VALUES(?,?,?,?,datetime('now')) "
-        "ON CONFLICT(key) DO UPDATE SET start=excluded.start, end=excluded.end, "
-        "updated_at=excluded.updated_at",
-        (key, site, start, end),
+        "INSERT INTO campaigns(key, site, kind, start, end, min_items, rate, updated_at) "
+        "VALUES(?,?,?,?,?,?,?,datetime('now')) "
+        "ON CONFLICT(key) DO UPDATE SET kind=excluded.kind, start=excluded.start, end=excluded.end, "
+        "min_items=excluded.min_items, rate=excluded.rate, updated_at=excluded.updated_at",
+        (key, site, kind, start, end, min_items, rate),
     )
+    # 活动可能缩水，先清掉旧名单再写
+    conn.execute("DELETE FROM campaign_works WHERE key=?", (key,))
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     for card in cards:
         conn.execute(
@@ -152,16 +212,21 @@ def save(conn, site, key, start, end, cards, pool=None):
             "coupon_price=COALESCE(excluded.coupon_price, price_samples.coupon_price), carried=0",
             (card["workno"], day, card["price"], coupon_price),
         )
+        item_rate = None
+        if card.get("base") and card["base"] > 0 and card["price"] <= card["base"]:
+            item_rate = int(round((card["base"] - card["price"]) * 100.0 / card["base"]))
         db.recompute_stats(conn, card["workno"])
         conn.execute(
-            "INSERT INTO works(workno, title, site, current_price, base_price, min_price, min_at, "
-            "max_price, first_seen, points, updated_at) "
-            "VALUES(?,?,?,?,?,?,?,?,?,1,?) "
-            "ON CONFLICT(workno) DO UPDATE SET title=COALESCE(excluded.title, works.title), "
+            "INSERT INTO works(workno, title, site, current_price, base_price, discount_rate, "
+            "min_price, min_at, max_price, first_seen, points, updated_at) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?,1,?) "
+            "ON CONFLICT(workno) DO UPDATE SET title=CASE WHEN excluded.title IS NULL OR excluded.title='' "
+            "THEN works.title ELSE excluded.title END, "
             "current_price=excluded.current_price, base_price=COALESCE(excluded.base_price, works.base_price), "
+            "discount_rate=COALESCE(excluded.discount_rate, works.discount_rate), "
             "updated_at=excluded.updated_at",
-            (card["workno"], card["title"], site, card["price"], card["base"], card["price"], day,
-             card["price"], day, now),
+            (card["workno"], card["title"], site, card["price"], card["base"], item_rate,
+             card["price"], day, card["price"], day, now),
         )
     conn.commit()
     return len(cards)
@@ -203,11 +268,23 @@ def main():
             if row["end"] and row["end"] < now:
                 print("%-28s 已结束（%s），跳过" % (row["key"], row["end"]))
                 continue
-            cards, pages = crawl(args.site, row["key"], max_pages=args.pages, page_delay=args.delay)
-            print("%-28s %d 页 / %d 件  %s → %s" % (row["key"], pages, len(cards),
-                                                   row["start"][:10], row["end"][:10]))
-            if args.save and cards:
-                total += save(conn, args.site, row["key"], row["start"], row["end"], cards, pool)
+            if "bulkbuy" in (row.get("url") or ""):
+                cards, pages, min_items, rate = crawl_bulkbuy(
+                    args.site, row["key"], max_pages=args.pages, page_delay=args.delay
+                )
+                print("%-28s [套装 %s件以上 %s%%OFF] %d 页 / %d 件  %s → %s" % (
+                    row["key"], min_items, rate, pages, len(cards),
+                    row["start"][:10], row["end"][:10]))
+                if args.save and cards:
+                    total += save(conn, args.site, row["key"], row["start"], row["end"], cards,
+                                  pool, kind="bulkbuy", min_items=min_items, rate=rate)
+            else:
+                cards, pages = crawl(args.site, row["key"], max_pages=args.pages, page_delay=args.delay)
+                print("%-28s %d 页 / %d 件  %s → %s" % (row["key"], pages, len(cards),
+                                                       row["start"][:10], row["end"][:10]))
+                if args.save and cards:
+                    total += save(conn, args.site, row["key"], row["start"], row["end"], cards,
+                                  pool, kind="discount")
         if conn:
             conn.close()
             print("合计入库 %d 件" % total)
@@ -218,7 +295,16 @@ def main():
         return 1
 
     meta = next((b for b in banners(args.site) if b["key"] == args.key), {})
-    cards, pages = crawl(args.site, args.key, max_pages=args.pages, page_delay=args.delay)
+    if "bulkbuy" in (meta.get("url") or ""):
+        cards, pages, min_items, rate = crawl_bulkbuy(
+            args.site, args.key, max_pages=args.pages, page_delay=args.delay
+        )
+        print("套装规则：%s 件以上 %s%%OFF" % (min_items, rate))
+        kind = "bulkbuy"
+    else:
+        cards, pages = crawl(args.site, args.key, max_pages=args.pages, page_delay=args.delay)
+        min_items = rate = None
+        kind = "discount"
     print("抓取 %d 页，解析 %d 件（去重后）" % (pages, len(cards)))
     if cards:
         sample = cards[0]
@@ -239,7 +325,8 @@ def main():
         migrate.apply(conn)
         pool = coupons.load_cached(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                                 "data", "coupons.json"))
-        n = save(conn, args.site, args.key, meta.get("start", ""), meta.get("end", ""), cards, pool)
+        n = save(conn, args.site, args.key, meta.get("start", ""), meta.get("end", ""), cards,
+                 pool, kind=kind, min_items=min_items, rate=rate)
         conn.close()
         print("已入库 %d 件" % n)
     return 0
