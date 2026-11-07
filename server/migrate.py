@@ -26,6 +26,11 @@ COLUMNS = [
     ("campaigns", "kind", "TEXT"),
     ("campaigns", "min_items", "INTEGER"),
     ("campaigns", "rate", "INTEGER"),
+    ("works", "bulkbuy_key", "TEXT"),
+    ("works", "bulkbuy_title", "TEXT"),
+    ("works", "bulkbuy_items", "INTEGER"),
+    ("works", "bulkbuy_rate", "INTEGER"),
+    ("works", "bulkbuy_price", "INTEGER"),
     ("works", "bulkbuy_start", "TEXT"),
     ("works", "bulkbuy_end", "TEXT"),
 ]

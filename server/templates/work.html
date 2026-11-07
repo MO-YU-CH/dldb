@@ -32,7 +32,7 @@
     <div><dt>{{ T('work_current') }}</dt><dd class="big">¥{{ work.current_price|num }}</dd></div>
     <div><dt>{{ T('work_base') }}</dt><dd>¥{{ work.base_price|num }}</dd></div>
     {% if bundle_rate and eff_price %}
-    <div><dt>{{ T('bundle_price') }}</dt><dd class="good">¥{{ eff_price|num }} <span class="dim">{{ eff_rate }}%OFF</span></dd></div>
+    <div><dt>{{ T('bundle_price') }}</dt><dd class="good">¥{{ eff_price|num }} <span class="dim">{% if bundle_items %}{{ T('bundle_items', n=bundle_items) }} · {% endif %}{{ eff_rate }}%OFF</span></dd></div>
     {% endif %}
     {% if coupon_after and coupon_after < (eff_price or work.current_price) %}
     <div><dt>{{ T('couponAfter') }}</dt><dd class="good">¥{{ coupon_after|num }}

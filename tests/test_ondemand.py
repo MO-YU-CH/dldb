@@ -37,6 +37,10 @@ class TestIngest(unittest.TestCase):
         self._env = os.environ.pop("DLDB_ONDEMAND", None)
         self._interval = ondemand.MIN_INTERVAL
         ondemand.MIN_INTERVAL = 0
+        # 测试绝不联网：历史接口一律 mock 成空
+        patcher = mock.patch.object(ondemand, "_fetch_history", return_value=[])
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def tearDown(self):
         ondemand.MIN_INTERVAL = self._interval
@@ -72,6 +76,20 @@ class TestIngest(unittest.TestCase):
         self.assertEqual(row["points"], 1)
         self.assertEqual(row["site"], "books")
         self.assertEqual(len(self.read("SELECT * FROM price_samples WHERE workno='BJ02228188'")), 1)
+
+    def test_history_is_merged(self):
+        with mock.patch.object(
+            ondemand, "_fetch_history", return_value=[("2026-09-01", 900), ("2026-09-05", 1200)]
+        ):
+            with mock.patch.object(ondemand, "_fetch", return_value=ITEM):
+                self.assertTrue(ondemand.ingest("RJ222222", path=self.path))
+        rows = self.read("SELECT day, price FROM price_samples WHERE workno='RJ222222' ORDER BY day")
+        self.assertEqual(len(rows), 3, "历史点 + 今天")
+        self.assertEqual(rows[0]["price"], 900)
+        work = self.read("SELECT min_price, max_price, points FROM works WHERE workno='RJ222222'")[0]
+        self.assertEqual(work["min_price"], 742)  # 今天 742 低于 900/1200
+        self.assertEqual(work["max_price"], 1200)
+        self.assertEqual(work["points"], 3)
 
     def test_second_call_is_noop(self):
         with mock.patch.object(ondemand, "_fetch", return_value=ITEM):

@@ -40,18 +40,12 @@ def run(path=None, pool_path=None, dry_run=False):
             return 0
 
         day = datetime.now(JST).strftime("%Y-%m-%d")
-        # 进行中的套装活动：券要作用在「套装价」上，不是单品价。
-        # 是否套装对象由每件自己的 bulkbuy_end 决定（product.json 直接给的）。
+        # 券作用在「套装价」上。套装信息每件自带（bulkbuy_*），
+        # 不能再用全局折扣率——同时有十几个活动，折扣率各不相同。
         now = datetime.now(JST).strftime("%Y-%m-%dT%H:%M:%S")
-        row = conn.execute(
-            "SELECT MAX(rate) AS r FROM campaigns WHERE kind='bulkbuy' AND rate IS NOT NULL "
-            "  AND (start IS NULL OR start='' OR start <= ?) "
-            "  AND (end IS NULL OR end='' OR end >= ?)",
-            (now, now),
-        ).fetchone()
-        bundle_rate = row["r"] if row and row["r"] else None
         rows = conn.execute(
-            "SELECT workno, site, current_price, base_price, discount_rate, bulkbuy_end "
+            "SELECT workno, site, current_price, base_price, discount_rate, "
+            "       bulkbuy_rate, bulkbuy_price, bulkbuy_end "
             "FROM works WHERE current_price IS NOT NULL"
         ).fetchall()
 
@@ -63,12 +57,13 @@ def run(path=None, pool_path=None, dry_run=False):
                 (row["workno"], day),
             ).fetchone()
             base = existing["price"] if existing else row["current_price"]
-            in_bundle = (
-                bundle_rate if (bundle_rate and row["bulkbuy_end"] and row["bulkbuy_end"] >= now) else None
-            )
+            active = bool(row["bulkbuy_end"] and row["bulkbuy_end"] >= now)
             eff, _rate = pricing.effective_price(
-                row["base_price"], row["discount_rate"], in_bundle
+                row["base_price"], row["discount_rate"],
+                row["bulkbuy_rate"] if active else None,
             )
+            if active and row["bulkbuy_price"]:
+                eff = row["bulkbuy_price"]
             after, _coupon = pool.best(row["workno"], eff or base, row["site"])
             if after is None:
                 continue

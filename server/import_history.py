@@ -50,7 +50,12 @@ CREATE TABLE IF NOT EXISTS works (
     current_price INTEGER,
     base_price    INTEGER,
     discount_rate INTEGER,
-    bulkbuy_start TEXT,          -- 套装活动起止；非空即为套装对象（来自 product.json）
+    bulkbuy_key   TEXT,          -- 套装活动（product.json 直接给的，每件不同）
+    bulkbuy_title TEXT,
+    bulkbuy_items INTEGER,       -- 凑几件
+    bulkbuy_rate  INTEGER,       -- 该活动的折扣率
+    bulkbuy_price INTEGER,       -- DLsite 算好的套装单价
+    bulkbuy_start TEXT,
     bulkbuy_end   TEXT,
     min_price     INTEGER,
     min_at        TEXT,

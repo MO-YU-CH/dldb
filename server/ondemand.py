@@ -29,6 +29,9 @@ import db
 JST = timezone(timedelta(hours=9))
 WORKNO_RE = re.compile(r"^[A-Z]{2}\d{6,10}$")
 API = "https://www.dlsite.com/{site}/api/=/product.json?workno={workno}"
+# 历史价格来源：第三方公开接口。DLsite 自身不提供历史序列，
+# 所以「历史最低」只能从这里取；命中率实测约 7/10。
+HISTORY_API = "https://price.maenohou.com/api/lookup/dlsite/{workno}"
 UA = "DLsiteCouponPlus/0.1 (on-demand lookup; +https://dlsite.momo-yu.com/about)"
 
 SITE_BY_PREFIX = {"RJ": "maniax", "BJ": "books", "VJ": "pro", "RE": "maniax", "VE": "pro"}
@@ -71,6 +74,13 @@ def _fetch(workno, site, timeout=12):
         "circle": item.get("maker_name"),
         "site": item.get("site_id") or site,
         "discount_rate": item.get("discount_rate"),
+        "bb_key": item.get("bulkbuy_key"),
+        "bb_title": item.get("bulkbuy_title"),
+        "bb_items": item.get("bulkbuy_per_items"),
+        "bb_rate": item.get("bulkbuy_discount_rate"),
+        "bb_price": item.get("bulkbuy_price"),
+        "bb_start": item.get("bulkbuy_start"),
+        "bb_end": item.get("bulkbuy_end"),
     }
 
 
@@ -84,6 +94,31 @@ def _within_cap():
         _daily["day"] = today
         _daily["count"] = 0
     return _daily["count"] < DAILY_CAP
+
+
+def _fetch_history(workno, timeout=15):
+    """返回 [(day, price)]；没有历史时返回空列表，绝不抛给调用方。"""
+    req = urllib.request.Request(
+        HISTORY_API.format(workno=workno),
+        headers={"User-Agent": UA, "Accept": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as res:
+            data = json.loads(res.read().decode("utf-8"))
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError, OSError):
+        return []
+    platforms = data.get("platforms") or []
+    if not platforms:
+        return []
+    points = []
+    for point in platforms[0].get("history") or []:
+        if not isinstance(point, (list, tuple)) or len(point) < 2:
+            continue
+        day, price = point[0], point[1]
+        if not isinstance(day, str) or not isinstance(price, (int, float)):
+            continue
+        points.append((day, int(price)))
+    return points
 
 
 def ingest(workno, path=None):
@@ -128,8 +163,10 @@ def ingest(workno, path=None):
         conn.execute(
             """
             INSERT INTO works(workno, title, circle, site, current_price, base_price,
-                              discount_rate, min_price, min_at, max_price, first_seen, points, updated_at)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))
+                              discount_rate, bulkbuy_key, bulkbuy_title, bulkbuy_items,
+                              bulkbuy_rate, bulkbuy_price, bulkbuy_start, bulkbuy_end,
+                              min_price, min_at, max_price, first_seen, points, updated_at)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))
             ON CONFLICT(workno) DO NOTHING
             """,
             (
@@ -140,6 +177,8 @@ def ingest(workno, path=None):
                 item["price"],
                 item["base_price"],
                 item["discount_rate"],
+                item.get("bb_key"), item.get("bb_title"), item.get("bb_items"),
+                item.get("bb_rate"), item.get("bb_price"), item.get("bb_start"), item.get("bb_end"),
                 item["price"],
                 day,
                 item["price"],
@@ -148,9 +187,19 @@ def ingest(workno, path=None):
             ),
         )
         conn.execute(
-            "INSERT OR REPLACE INTO price_samples(workno, day, price) VALUES(?,?,?)",
+            "INSERT OR REPLACE INTO price_samples(workno, day, price, carried) VALUES(?,?,?,0)",
             (workno, day, item["price"]),
         )
+        # 顺手把历史序列补上：插件要的是「历史最低」，只有今天一个点等于没有
+        history = _fetch_history(workno)
+        for h_day, h_price in history:
+            if h_day == day:
+                continue
+            conn.execute(
+                "INSERT OR IGNORE INTO price_samples(workno, day, price, carried) VALUES(?,?,?,0)",
+                (workno, h_day, h_price),
+            )
+        db.recompute_stats(conn, workno)
         conn.commit()
         _daily["count"] += 1
         return True

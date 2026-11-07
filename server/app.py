@@ -61,28 +61,36 @@ def _jst_now():
     return datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%dT%H:%M:%S")
 
 
-def active_bundle_rate(conn):
-    """进行中的套装活动折扣率（campaigns.kind='bulkbuy'）。缓存 5 分钟。"""
-    if _bundle_cache["loaded"] and time.time() - _bundle_cache["at"] < BUNDLE_TTL:
-        return _bundle_cache["rate"]
-    now = _jst_now()
-    row = conn.execute(
-        "SELECT MAX(rate) AS r FROM campaigns "
-        "WHERE kind='bulkbuy' AND rate IS NOT NULL "
-        "  AND (start IS NULL OR start='' OR start <= ?) "
-        "  AND (end IS NULL OR end='' OR end >= ?)",
-        (now, now),
-    ).fetchone()
-    rate = row["r"] if row and row["r"] else None
-    _bundle_cache.update({"at": time.time(), "rate": rate, "loaded": True})
-    return rate
+def bundle_info(row):
+    """每件作品自带套装信息（product.json 的 bulkbuy_*），活动结束即视为无。
 
-
-def bundle_rate_for(row, active_rate):
-    """单件是否套装对象，看它自己的 bulkbuy_end——这是 product.json 直接给的，不用猜。"""
-    if not active_rate or not row["bulkbuy_end"]:
+    不要再靠「活动表 + 全局折扣率」推断：同时存在十几个套装活动
+    （2件9折、3件60%、10件10000円……），折扣率各不相同。
+    """
+    try:
+        end = row["bulkbuy_end"]
+    except (IndexError, KeyError):
         return None
-    return active_rate if row["bulkbuy_end"] >= _jst_now() else None
+    if not end or end < _jst_now():
+        return None
+    return {
+        "key": row["bulkbuy_key"],
+        "title": row["bulkbuy_title"],
+        "items": row["bulkbuy_items"],
+        "rate": row["bulkbuy_rate"],
+        "price": row["bulkbuy_price"],
+    }
+
+
+def effective_for(row):
+    """有效价：优先用 DLsite 给的 bulkbuy_price，其次按「取较大折扣」算。"""
+    info = bundle_info(row)
+    eff, rate = pricing.effective_price(
+        row["base_price"], row["discount_rate"], info["rate"] if info else None
+    )
+    if info and info.get("price"):
+        return info["price"], info.get("rate") or rate, info
+    return eff, rate, info
 
 
 def get_pool():
@@ -92,7 +100,6 @@ def get_pool():
 
 _rank_cache = {"key": None, "rows": [], "at": 0.0}
 _health_cache = {"at": 0.0, "data": None}
-_bundle_cache = {"at": 0.0, "rate": None, "loaded": False}
 BUNDLE_TTL = 300
 RANK_TTL = 300
 
@@ -103,10 +110,10 @@ def coupon_new_lows(conn, pool, limit=50, min_points=30):
     if _rank_cache["key"] == key:
         return _rank_cache["rows"]
 
-    active_rate = active_bundle_rate(conn)
     rows = conn.execute(
         "SELECT w.workno, w.title, w.circle, w.site, w.current_price, w.min_price, w.points, "
-        "       w.base_price, w.discount_rate, w.bulkbuy_end, "
+        "       w.base_price, w.discount_rate, w.bulkbuy_key, w.bulkbuy_title, w.bulkbuy_items, "
+        "       w.bulkbuy_rate, w.bulkbuy_price, w.bulkbuy_end, "
         "       c.cmin AS coupon_min, c.cn AS coupon_points "
         "FROM works w LEFT JOIN ("
         "  SELECT workno, MIN(coupon_price) AS cmin, COUNT(coupon_price) AS cn "
@@ -118,9 +125,7 @@ def coupon_new_lows(conn, pool, limit=50, min_points=30):
 
     out = []
     for row in rows:
-        eff_price, _ = pricing.effective_price(
-            row["base_price"], row["discount_rate"], bundle_rate_for(row, active_rate)
-        )
+        eff_price, _rate, _info = effective_for(row)
         after, coupon = pool.best(row["workno"], eff_price or row["current_price"], row["site"])
         if after is None:
             continue
@@ -283,10 +288,8 @@ def create_app():
         )
 
         # 券后价与历史定位：券是公开券池口径，比用户个人持券保守
-        bundle_rate = bundle_rate_for(row, active_bundle_rate(g.db))
-        eff_price, eff_rate = pricing.effective_price(
-            row["base_price"], row["discount_rate"], bundle_rate
-        )
+        eff_price, eff_rate, bundle = effective_for(row)
+        bundle_rate = bundle["rate"] if bundle else None
         coupon_after, coupon = (None, None)
         base_for_coupon = eff_price or row["current_price"]
         if base_for_coupon:
@@ -317,6 +320,7 @@ def create_app():
             eff_price=eff_price,
             eff_rate=eff_rate,
             bundle_rate=bundle_rate,
+            bundle_items=bundle["items"] if bundle else None,
             coupon_min=min(c_prices) if c_prices else None,
             coupon_points=len(c_prices),
         )
@@ -358,10 +362,8 @@ def create_app():
             return jsonify({"error": "not found", "workId": workno}), 404
 
         history = db.get_history(g.db, workno)
-        bundle_rate = bundle_rate_for(row, active_bundle_rate(g.db))
-        eff_price, eff_rate = pricing.effective_price(
-            row["base_price"], row["discount_rate"], bundle_rate
-        )
+        eff_price, eff_rate, bundle = effective_for(row)
+        bundle_rate = bundle["rate"] if bundle else None
         coupon_after, coupon = (None, None)
         base_for_coupon = eff_price or row["current_price"]
         if base_for_coupon:
@@ -396,6 +398,9 @@ def create_app():
                         ),
                         "couponRate": None,
                         "bundleRate": bundle_rate,
+                        "bundleKey": bundle["key"] if bundle else None,
+                        "bundleItems": bundle["items"] if bundle else None,
+                        "bundleTitle": bundle["title"] if bundle else None,
                         "effectivePrice": eff_price,
                         "effectiveRate": eff_rate,
                         "couponPrice": coupon_after,

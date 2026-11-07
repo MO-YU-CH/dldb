@@ -79,12 +79,17 @@ def fetch_price(workno, site, timeout=20):
     base = item.get("official_price")
     if price is None:
         return None
-    return (
-        int(price),
-        int(base) if base is not None else None,
-        item.get("bulkbuy_start"),
-        item.get("bulkbuy_end"),
-    )
+    return {
+        "price": int(price),
+        "base": int(base) if base is not None else None,
+        "bb_key": item.get("bulkbuy_key"),
+        "bb_title": item.get("bulkbuy_title"),
+        "bb_items": item.get("bulkbuy_per_items"),
+        "bb_rate": item.get("bulkbuy_discount_rate"),
+        "bb_price": item.get("bulkbuy_price"),
+        "bb_start": item.get("bulkbuy_start"),
+        "bb_end": item.get("bulkbuy_end"),
+    }
 
 
 def refresh_one(conn, workno, site, delay):
@@ -92,7 +97,7 @@ def refresh_one(conn, workno, site, delay):
     try:
         got = fetch_price(workno, site)
         if got:
-            price, base, bb_start, bb_end = got
+            price, base = got["price"], got["base"]
             day = jst_today()
             after, _coupon = coupons.load_cached(POOL_PATH).best(workno, price, site)
             conn.execute(
@@ -108,12 +113,14 @@ def refresh_one(conn, workno, site, delay):
             conn.execute(
                 """
                 UPDATE works SET current_price=?, base_price=COALESCE(?, base_price),
-                       bulkbuy_start=?, bulkbuy_end=?,
+                       bulkbuy_key=?, bulkbuy_title=?, bulkbuy_items=?, bulkbuy_rate=?,
+                       bulkbuy_price=?, bulkbuy_start=?, bulkbuy_end=?,
                        min_price=?, max_price=?, first_seen=?, points=?,
                        updated_at=datetime('now')
                 WHERE workno=?
                 """,
-                (price, base, bb_start, bb_end,
+                (price, base, got["bb_key"], got["bb_title"], got["bb_items"], got["bb_rate"],
+                 got["bb_price"], got["bb_start"], got["bb_end"],
                  agg["lo"], agg["hi"], agg["first"], agg["n"], workno),
             )
             conn.commit()
