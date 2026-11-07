@@ -7,7 +7,7 @@
 ## 仓库结构
 
 ```
-extension/       Chrome MV3 扩展（3,337 行，含 14 语 UI）
+extension/       Chrome MV3 扩展（3,723 行，含 14 语 UI）
 userscript/      Tampermonkey 脚本源与构建产物
 server/          Flask 价格站 + SQLite + 历史导入器
 scripts/         构建与生成脚本（图标等）
@@ -21,22 +21,35 @@ docs/            计划书、评审记录、数据管线说明
 # Chrome → chrome://extensions → 开启开发者模式 → 加载已解压的扩展 → 选择 extension/
 ```
 
-依赖顺序固定，改动 `lib/` 后需按 `i18n → coupon → history → (content | cart → cart-content)` 顺序检查：
+依赖顺序固定，改动 `lib/` 后需按 `i18n → coupon → history → (content | cart → cart-content) → lowpos` 顺序检查：
 
 ```
 i18n.js 14 语字典与语言探测 / coupon.js 券分类与整单计算
 history.js 本机记录 / content.js 作品页面板 / cart.js 拆单优化器 / cart-content.js 购物车面板
+lowpos.js 历史低位判定（挂在面板下方，不改 content.js，避免同步时被覆盖）
 ```
+
+### 开发源在上游目录
+
+插件仍以 `H:\Dlsite\dl-ext\price-db-plus` 为开发主副本，`extension/` 是发布镜像，两者内容保持一致。
+
+```bash
+python scripts/apply_upstream_patch.py   # 把仓库侧的改动（品牌/数据源/lowpos）回写到上游，自动备份
+python scripts/sync_extension.py         # 上游 → 仓库（单向同步 + 校验）
+python scripts/package_extension.py      # 校验引用与语法后打 zip
+```
+
+改插件的正确顺序：**改上游 → 回写补丁（如需）→ sync → build/package**。
 
 ## 油猴脚本
 
-**一键安装**：<https://dlsite.momo-yu.com/dlsite-coupon-plus.user.js?v=2.0.0>（Tampermonkey 会识别 `.user.js` 后缀并弹出安装页）
+**一键安装**：<https://dlsite.momo-yu.com/dlsite-coupon-plus.user.js?v=2.1.0>（Tampermonkey 会识别 `.user.js` 后缀并弹出安装页）
 
 > 链接带 `?v=` 是必须的：Cloudflare 对 `.js` 走 4 小时边缘缓存，不带版本号发版后会取到旧文件。
 
 ```bash
 node userscript/build.mjs          # 产出 userscript/dist/dlsite-coupon-plus.user.js
-node tests/test_userscript.mjs     # shim 语义 + 产物不变量，14 项
+node tests/test_userscript.mjs     # shim 语义 + 产物不变量 + 面板，19 项
 ```
 
 构建只做三件事：注入元数据块、按依赖顺序拼接、校验产物。**不使用 `@require` 拉远程**（延迟、可被篡改、审核风险）。

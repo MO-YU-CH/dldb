@@ -39,6 +39,7 @@ FILES = [
     "lib/coupon.js",
     "lib/cart.js",
     "lib/history.js",
+    "lib/lowpos.js",
 ]
 
 # 顺序敏感：先替换长串，避免短串先命中
