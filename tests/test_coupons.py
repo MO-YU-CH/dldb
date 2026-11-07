@@ -173,9 +173,15 @@ class TestPosition(unittest.TestCase):
         self.assertEqual(pos["pct"], 83)
 
     def test_below_low(self):
-        pos = pricing.position([100, 200], 80)
+        pos = pricing.position(self.SERIES, 80)
         self.assertTrue(pos["is_low"])
         self.assertEqual(pos["gap"], 20)
+
+    def test_few_points_never_claim_low(self):
+        # 只有 1~4 个点就说「历史最低」是误导，宁可不说
+        pos = pricing.position([100, 200], 80)
+        self.assertFalse(pos["is_low"])
+        self.assertIsNone(pos["pct"])
 
     def test_few_points_hides_pct(self):
         pos = pricing.position([100, 200], 150)

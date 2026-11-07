@@ -30,7 +30,7 @@ BRAND_OLD = "価格DB+ 券後最安"
 BRAND_NEW = "DLsite Coupon Plus"
 API_OLD = "https://price.maenohou.com"
 API_NEW = "https://dlsite.momo-yu.com"
-VERSION = "2.1.0"
+from version import VERSION
 
 # (文件, 旧串, 新串)
 REPLACEMENTS = [

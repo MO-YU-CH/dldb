@@ -25,8 +25,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DST = os.path.join(ROOT, "extension")
 SRC = os.environ.get("DLDB_UPSTREAM", r"H:\Dlsite\dl-ext\price-db-plus")
 NODE = os.environ.get("DLDB_NODE", r"D:\nodejs\node.exe")
-# 发布版本号：同步时统一写进 manifest，扩展与油猴脚本共用
-VERSION = "2.1.0"
+from version import VERSION  # 发布版本号唯一来源
 
 FILES = [
     "manifest.json",

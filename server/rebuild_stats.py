@@ -37,7 +37,6 @@ WHERE works.workno = s.workno
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--db", default=db.DB_PATH)
     ap.add_argument("--apply", action="store_true")
     args = ap.parse_args()
 
@@ -47,7 +46,7 @@ def main():
         "  SELECT MAX(price) FROM price_samples p WHERE p.workno = works.workno)"
     ).fetchone()[0]
     total = conn.execute("SELECT COUNT(*) FROM works").fetchone()[0]
-    print("库：%s" % args.db)
+    print("库：%s" % db.db_path())
     print("作品 %d，其中 max_price 高于实际最高价的有 %d 件" % (total, bad))
 
     if not args.apply:

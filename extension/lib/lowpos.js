@@ -72,7 +72,7 @@
     return {
       min: lo,
       points: n,
-      isLow: current <= lo,
+      isLow: n >= MIN_POINTS && current <= lo,
       pct: n >= MIN_POINTS ? Math.round((cheaper * 100) / n) : null,
     };
   }

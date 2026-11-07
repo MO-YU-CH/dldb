@@ -28,6 +28,7 @@ import charts
 import coupons
 import db
 import i18n
+import ondemand
 import pricing
 
 BASE_URL = os.environ.get("DLDB_BASE_URL", "https://dlsite.momo-yu.com")
@@ -209,6 +210,13 @@ def create_app():
             resp.headers["Cache-Control"] = "public, max-age=%d" % CACHE_SECONDS
         return resp
 
+    def load_work(workno):
+        """库里没有就现场取一次——第三方 sitemap 不覆盖书籍区（BJ）。"""
+        row = db.get_work(g.db, workno)
+        if row is None and ondemand.ingest(workno):
+            row = db.get_work(g.db, workno)
+        return row
+
     @app.get("/")
     def root():
         return redirect(url_for("home", locale=i18n.pick(request)), code=302)
@@ -226,7 +234,7 @@ def create_app():
     @app.get("/<locale>/works/<workno>")
     def work(locale, workno):
         workno = (workno or "").strip().upper()
-        row = db.get_work(g.db, workno)
+        row = load_work(workno)
         if row is None:
             return _render("not_found.html", status=404, workno=workno, active="")
 
@@ -289,7 +297,7 @@ def create_app():
         if store != "dlsite":
             return jsonify({"error": "unsupported store"}), 404
         workno = workno.strip().upper()
-        row = db.get_work(g.db, workno)
+        row = load_work(workno)
         if row is None:
             return jsonify({"error": "not found", "workId": workno}), 404
 

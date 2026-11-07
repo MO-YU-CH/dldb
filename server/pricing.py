@@ -14,7 +14,7 @@ def position(prices, current, min_points=5):
     prices  ：历史每日价格（整数円），可含重复
     current ：当前有效价（券后价，整数円）
     pct     ：比过去多少比例的日子更便宜（0-100 整数）；样本不足时为 None
-    is_low  ：是否等于或低于历史最低
+    is_low  ：是否等于或低于历史最低；样本不足 5 天时恒为 False（没有可比的历史）
     """
     if current is None:
         return None
@@ -31,7 +31,7 @@ def position(prices, current, min_points=5):
         "min": lo,
         "max": hi,
         "points": n,
-        "is_low": current <= lo,
+        "is_low": n >= min_points and current <= lo,
         "pct": int(round(cheaper_than * 100.0 / n)) if n >= min_points else None,
         "gap": lo - current,  # 低于历史最低多少円（负数表示还没到最低）
     }

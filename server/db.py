@@ -7,20 +7,24 @@ WAL 模式下读多写少，单进程 waitress 足够。
 import os
 import sqlite3
 
-DB_PATH = os.environ.get(
-    "DLDB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "dlsite.db")
-)
+DEFAULT_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "dlsite.db")
+# 兼容旧引用；连接时请用 db_path()，因为测试会在导入后才设置 DLDB_PATH
+DB_PATH = os.environ.get("DLDB_PATH", DEFAULT_DB)
+
+
+def db_path():
+    return os.environ.get("DLDB_PATH", DEFAULT_DB)
 
 
 def connect():
-    conn = sqlite3.connect(DB_PATH, timeout=15)
+    conn = sqlite3.connect(db_path(), timeout=15)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA query_only=ON")
     return conn
 
 
 def connect_rw():
-    conn = sqlite3.connect(DB_PATH, timeout=30)
+    conn = sqlite3.connect(db_path(), timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn

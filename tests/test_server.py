@@ -16,6 +16,8 @@ sys.path.insert(0, SERVER)
 
 _TMP = tempfile.mkdtemp(prefix="dldb-test-")
 os.environ["DLDB_PATH"] = os.path.join(_TMP, "test.db")
+# 测试不联网：关掉「按需入库」
+os.environ["DLDB_ONDEMAND"] = "0"
 
 import charts  # noqa: E402
 import i18n  # noqa: E402

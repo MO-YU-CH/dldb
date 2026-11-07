@@ -130,14 +130,13 @@ def run_once(conn, limit, delay):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--db", default=db.DB_PATH)
     ap.add_argument("--once", action="store_true")
     ap.add_argument("--loop", action="store_true")
     ap.add_argument("--limit", type=int, default=50)
     ap.add_argument("--delay", type=float, default=10.0)
     args = ap.parse_args()
 
-    print("PID=%d 间隔=%.1fs" % (os.getpid(), args.delay))
+    print("PID=%d 间隔=%.1fs 库=%s" % (os.getpid(), args.delay, db.db_path()))
     conn = db.connect_rw()
     pool_n = refresh_pool()
     print("券池：%s" % ("%d 张" % pool_n if pool_n else "未更新，沿用旧池"))
