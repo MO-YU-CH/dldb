@@ -29,17 +29,18 @@ history.js 本机记录 / content.js 作品页面板 / cart.js 拆单优化器 /
 lowpos.js 历史低位判定（挂在面板下方，不改 content.js，避免同步时被覆盖）
 ```
 
-### 开发源在上游目录
+### 修改与打包
 
-插件仍以 `H:\Dlsite\dl-ext\price-db-plus` 为开发主副本，`extension/` 是发布镜像，两者内容保持一致。
+`extension/` 是插件源码目录，直接改即可。
 
 ```bash
-python scripts/apply_upstream_patch.py   # 把仓库侧的改动（品牌/数据源/lowpos）回写到上游，自动备份
-python scripts/sync_extension.py         # 上游 → 仓库（单向同步 + 校验）
-python scripts/package_extension.py      # 校验引用与语法后打 zip
+python scripts/make_icons.py             # 生成图标（图标不入库，克隆后需先跑一次）
+python scripts/package_extension.py      # 校验引用与语法后打 zip 到 dist/
+python scripts/sync_extension.py         # 可选：从个人工作副本单向同步并校验
 ```
 
-改插件的正确顺序：**改上游 → 回写补丁（如需）→ sync → build/package**。
+`sync_extension.py` / `apply_upstream_patch.py` 是作者维护个人分支用的脚本，
+依赖本地路径（`DLDB_UPSTREAM` 环境变量），普通贡献者不需要。
 
 ## 参与与讨论
 
@@ -50,13 +51,13 @@ python scripts/package_extension.py      # 校验引用与语法后打 zip
 
 ## 油猴脚本
 
-**一键安装**：<https://dlsite.momo-yu.com/dlsite-coupon-plus.user.js?v=2.1.0>（Tampermonkey 会识别 `.user.js` 后缀并弹出安装页）
+**一键安装**：<https://dlsite.momo-yu.com/dlsite-coupon-plus.user.js?v=2.1.2>（Tampermonkey 会识别 `.user.js` 后缀并弹出安装页）
 
 > 链接带 `?v=` 是必须的：Cloudflare 对 `.js` 走 4 小时边缘缓存，不带版本号发版后会取到旧文件。
 
 ```bash
 node userscript/build.mjs          # 产出 userscript/dist/dlsite-coupon-plus.user.js
-node tests/test_userscript.mjs     # shim 语义 + 产物不变量 + 面板，19 项
+node tests/test_userscript.mjs     # shim 语义 + 产物不变量 + 面板，20 项
 ```
 
 构建只做三件事：注入元数据块、按依赖顺序拼接、校验产物。**不使用 `@require` 拉远程**（延迟、可被篡改、审核风险）。
