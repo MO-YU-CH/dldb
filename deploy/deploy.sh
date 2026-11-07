@@ -7,8 +7,8 @@
 # 依赖：Git Bash 的 scp/ssh，密钥路径见 DLDB_KEY。
 set -euo pipefail
 
-KEY="${DLDB_KEY:-F:/downloads/LightsailDefaultKey-ap-northeast-1.pem}"
-HOST="${DLDB_HOST:-ubuntu@18.178.213.148}"
+KEY="${DLDB_KEY:?请先 export DLDB_KEY=<你的 SSH 私钥路径>}"
+HOST="${DLDB_HOST:?请先 export DLDB_HOST=<user@host>}"
 REMOTE_DIR="${DLDB_DIR:-/home/ubuntu/dldb}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SSH_OPTS=(-i "$KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new)

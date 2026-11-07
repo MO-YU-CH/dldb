@@ -41,6 +41,11 @@ python scripts/package_extension.py      # 校验引用与语法后打 zip
 
 改插件的正确顺序：**改上游 → 回写补丁（如需）→ sync → build/package**。
 
+## 参与与讨论
+
+想把数据采集做得更快？`docs/REQUIREMENTS.md` 记录了实测的接口、规模与限制（含 maniax 43 万件、
+`Crawl-delay: 10` 导致的 50 天/轮），以及目前没走通的几条路。有更好的办法欢迎开 issue。
+
 ## 油猴脚本
 
 **一键安装**：<https://dlsite.momo-yu.com/dlsite-coupon-plus.user.js?v=2.1.0>（Tampermonkey 会识别 `.user.js` 后缀并弹出安装页）
@@ -74,7 +79,7 @@ python import_history.py --limit 200                # 导入历史（可断点�
 python app.py                                       # 开发服务 http://127.0.0.1:8080
 ```
 
-线上：**https://dlsite.momo-yu.com**（AWS Lightsail 东京 `18.178.213.148`，Cloudflare 代理）。
+线上：**https://dlsite.momo-yu.com**（AWS Lightsail 东京，Cloudflare 代理）。
 部署与运维见 `docs/DEPLOY.md`；数据来源与合规约束见 `docs/DATA.md`；对原计划的技术核验见 `docs/REVIEW.md`。
 
 ## 开发约定

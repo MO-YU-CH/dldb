@@ -4,10 +4,10 @@
 
 | 项 | 值 |
 | --- | --- |
-| 公网 IP | `18.178.213.148`（AWS Lightsail，东京） |
+| 公网 IP | `<服务器 IP>`（AWS Lightsail，东京） |
 | 域名 | `dlsite.momo-yu.com`（Cloudflare 代理，橙云） |
 | 系统 | Ubuntu 24.04.4 LTS / 2 vCPU / 38 GB |
-| 登录 | `ubuntu@18.178.213.148`，密钥 `F:\downloads\LightsailDefaultKey-ap-northeast-1.pem` |
+| 登录 | `ubuntu@<服务器 IP>`，密钥自备（如 `~/.ssh/dldb.pem`） |
 | 应用目录 | `/home/ubuntu/dldb` |
 | 数据库 | `/home/ubuntu/dldb/server/data/dlsite.db` |
 
@@ -101,7 +101,7 @@ curl -s http://127.0.0.1:8080/healthz
 
 ## Cloudflare 设置
 
-- `dlsite.momo-yu.com` 的 A 记录指向 `18.178.213.148`，代理状态 **橙云开启**。
+- `dlsite.momo-yu.com` 的 A 记录指向 `<服务器 IP>`，代理状态 **橙云开启**。
 - SSL/TLS 模式建议 **Full (strict)**：源站已是 Caddy 自动申请的合法证书。
 - 若出现 522：先确认源站 `curl -sI http://127.0.0.1:8080/healthz` 是否 200，再核对 A 记录。
 
