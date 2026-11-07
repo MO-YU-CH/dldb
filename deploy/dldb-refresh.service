@@ -11,7 +11,7 @@ Group=ubuntu
 WorkingDirectory=/home/ubuntu/dldb/server
 Environment=DLDB_PATH=/home/ubuntu/dldb/server/data/dlsite.db
 # Crawl-delay: 10 是 DLsite robots.txt 的要求，不要调小
-ExecStart=/home/ubuntu/dldb/server/.venv/bin/python -u refresh.py --loop --limit 50 --delay 10
+ExecStart=/home/ubuntu/dldb/server/.venv/bin/python -u refresh.py --loop --limit 500 --delay 10
 Restart=always
 RestartSec=60
 Nice=15
