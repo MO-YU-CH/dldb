@@ -71,6 +71,17 @@ sudo systemctl start dldb dldb-refresh
 curl -s http://127.0.0.1:8080/healthz
 ```
 
+## 抓取并发控制
+
+`dldb-campaign` 与 `dldb-refresh` 都会请求 DLsite，而 robots 的 `Crawl-delay: 10` 是
+共享的——两个进程同时跑，实际频率会翻倍。因此：
+
+- `dldb-campaign.service` 启动时 `touch data/.campaign_lock`，结束时删除
+- `refresh.py` 每轮检查该文件，存在就休眠 60 秒让路
+- 活动抓取结束后自动跑一次 `coupon_daily.py` 补算券后价
+
+夜间的 `dldb-campaign.timer`（03:40 JST）与刷新任务因此不会叠加。
+
 ## 数据库调优
 
 | 参数 | 值 | 理由 |

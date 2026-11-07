@@ -35,6 +35,9 @@ API = "https://www.dlsite.com/{site}/api/=/product.json?workno={workno}"
 POOL_URL = "https://www.dlsite.com/home/api/=/coupon.json?cdn_cache=1"
 POOL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "coupons.json")
 POOL_TTL = 6 * 3600
+# 活动抓取运行时会创建这个文件；refresh 见到就让路，避免两个进程同时打 DLsite
+# 把实际请求频率翻倍（robots 的 Crawl-delay 是共享的）
+CAMPAIGN_LOCK = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", ".campaign_lock")
 
 
 def jst_today():
@@ -151,6 +154,10 @@ def main():
             run_once(conn, args.limit, args.delay)
         else:
             while True:
+                if os.path.exists(CAMPAIGN_LOCK):
+                    print("活动抓取进行中，刷新让路 60s", flush=True)
+                    time.sleep(60)
+                    continue
                 if time.time() - last_pool > POOL_TTL:
                     refresh_pool()
                     last_pool = time.time()

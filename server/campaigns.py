@@ -198,6 +198,7 @@ def save(conn, site, key, start, end, cards, pool=None, kind="discount", min_ite
     # 活动可能缩水，先清掉旧名单再写
     conn.execute("DELETE FROM campaign_works WHERE key=?", (key,))
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    over_bundle = []
     for card in cards:
         conn.execute(
             "INSERT INTO campaign_works(key, workno, day, price, base) VALUES(?,?,?,?,?) "
@@ -215,6 +216,10 @@ def save(conn, site, key, start, end, cards, pool=None, kind="discount", min_ite
         item_rate = None
         if card.get("base") and card["base"] > 0 and card["price"] <= card["base"]:
             item_rate = int(round((card["base"] - card["price"]) * 100.0 / card["base"]))
+            # 观测点：单品折扣高于套装时，「取较高者」与「套装优先」两种理解会给出不同价格。
+            # 目前 DLsite 的套装活动里没出现过这种作品（扫 150 件为 0），出现即需要重新实测。
+            if kind == "bulkbuy" and rate and item_rate > rate:
+                over_bundle.append(card["workno"])
         db.recompute_stats(conn, card["workno"])
         conn.execute(
             "INSERT INTO works(workno, title, site, current_price, base_price, discount_rate, "
@@ -229,6 +234,9 @@ def save(conn, site, key, start, end, cards, pool=None, kind="discount", min_ite
              card["price"], day, card["price"], day, now),
         )
     conn.commit()
+    if over_bundle:
+        print("  注意：%d 件单品折扣高于套装（%s），需要实测确认取哪个"
+              % (len(over_bundle), ", ".join(over_bundle[:5])))
     return len(cards)
 
 
