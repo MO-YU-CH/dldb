@@ -60,7 +60,7 @@ def get_coupon_history(conn, workno):
 
 def get_history(conn, workno):
     return conn.execute(
-        "SELECT day, price FROM price_samples WHERE workno = ? ORDER BY day", (workno,)
+        "SELECT day, price FROM price_samples WHERE workno = ? AND carried = 0 ORDER BY day", (workno,)
     ).fetchall()
 
 

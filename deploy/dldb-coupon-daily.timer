@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily coupon-price backfill (17:10 JST)
+
+[Timer]
+# 服务器时区 UTC，17:10 JST = 08:10 UTC
+OnCalendar=*-*-* 08:10:00 UTC
+Persistent=true
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target

@@ -117,7 +117,35 @@ api/lookup 或 /works/<id> 未命中
 
 代价要说清：新入库的作品只有**当天 1 个价格点**，所以既画不出曲线，也不该宣称「历史最低」。样本不足 5 天时，定位信息一律不显示。
 
-## 8. 已知问题
+## 8. 券后价的每日回填
+
+券后价 = f(价格, 券池)，两样我们本地都有，所以**不需要访问 DLsite**：
+`coupon_daily.py` 每天用 `works.current_price` + 最新券池，为全部作品写一条券后价。
+实测 20,226 部约 **3.7 秒**。
+
+写入时有两条规则：
+
+1. 当天已有价格行 → 只更新 `coupon_price`，**券按那一行的价格算**，不按 `works.current_price`
+2. 当天没有行 → 插入价格行，但 `carried = 1`
+
+`carried` 表示「价格是沿用上次实测值，不是当天观测」。价格图表、`min/max/points` 只认
+`carried = 0`；券后历史两者都认（券后价本身是按当天价格算出来的，仍然有效）。
+
+## 9. 活动与折扣的有效期（调研结论）
+
+`product.json` 里确实有折扣窗口：
+
+| 字段 | 含义 |
+| --- | --- |
+| `campaign_id / campaign_start_date / campaign_end_date` | 参加的活动及起止时间 |
+| `timesale_start_date / timesale_end_date / timesale_price` | 限时特卖 |
+| `limit_sale_id / limit_start_date / limit_end_date` | 限定特卖 |
+
+**但没有「活动 → 参加作品」的枚举入口**：`/maniax/campaign/`、`/maniax/sale/` 均 404，
+只有 `campaign/discount?key=<活动key>` 这种具体页；活动 key 只能从首页（只露主推）或作品页里发现。
+所以「活动结束后回扫」可做，「提前知道新活动」不可行——除非那件作品正好被扫到。
+
+## 10. 已知问题
 
 1. **`no_sku`**：少数作品页没有 JSON-LD（实测 ~2%）。这类页面会被标为 `no_sku` 跳过，后续可从 DLsite sitemap 反向补齐。
 2. **`marketing_register` 券判定**：扩展代码只判 `ad_lp_` 前缀，文档要求同时判 `marketing_register`。导入的历史价格不涉及券，但接券后价时需修正，否则最低价会偏高。

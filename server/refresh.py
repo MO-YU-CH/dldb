@@ -94,7 +94,7 @@ def refresh_one(conn, workno, site, delay):
             )
             agg = conn.execute(
                 "SELECT MIN(price) AS lo, MAX(price) AS hi, MIN(day) AS first, "
-                "COUNT(*) AS n FROM price_samples WHERE workno=?",
+                "COUNT(*) AS n FROM price_samples WHERE workno=? AND carried=0",
                 (workno,),
             ).fetchone()
             conn.execute(

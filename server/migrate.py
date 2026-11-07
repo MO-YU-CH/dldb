@@ -10,6 +10,7 @@ import db
 
 COLUMNS = [
     ("price_samples", "coupon_price", "INTEGER"),
+    ("price_samples", "carried", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 

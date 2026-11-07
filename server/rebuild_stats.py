@@ -29,7 +29,7 @@ UPDATE works SET
 FROM (
     SELECT workno, MIN(price) AS lo, MAX(price) AS hi,
            COUNT(*) AS n, MIN(day) AS first_day
-    FROM price_samples GROUP BY workno
+    FROM price_samples WHERE carried=0 GROUP BY workno
 ) AS s
 WHERE works.workno = s.workno
 """
@@ -43,7 +43,7 @@ def main():
     conn = db.connect_rw()
     bad = conn.execute(
         "SELECT COUNT(*) FROM works WHERE max_price > ("
-        "  SELECT MAX(price) FROM price_samples p WHERE p.workno = works.workno)"
+        "  SELECT MAX(price) FROM price_samples p WHERE p.workno = works.workno AND p.carried=0)"
     ).fetchone()[0]
     total = conn.execute("SELECT COUNT(*) FROM works").fetchone()[0]
     print("库：%s" % db.db_path())
@@ -67,7 +67,7 @@ def main():
     print("已重算 %d 行" % cur.rowcount)
     left = conn.execute(
         "SELECT COUNT(*) FROM works WHERE max_price > ("
-        "  SELECT MAX(price) FROM price_samples p WHERE p.workno = works.workno)"
+        "  SELECT MAX(price) FROM price_samples p WHERE p.workno = works.workno AND p.carried=0)"
     ).fetchone()[0]
     print("残留异常：%d" % left)
     conn.close()
