@@ -279,8 +279,9 @@ def create_app():
             row["base_price"], row["discount_rate"], bundle_rate
         )
         coupon_after, coupon = (None, None)
-        if eff_price:
-            coupon_after, coupon = get_pool().best(workno, eff_price, row["site"])
+        base_for_coupon = eff_price or row["current_price"]
+        if base_for_coupon:
+            coupon_after, coupon = get_pool().best(workno, base_for_coupon, row["site"])
         # 券后价历史只有上线后才开始积累；样本够 7 天才用它做判定
         c_hist = db.get_coupon_history(g.db, workno)
         c_prices = [r["coupon_price"] for r in c_hist]
@@ -353,8 +354,9 @@ def create_app():
             row["base_price"], row["discount_rate"], bundle_rate
         )
         coupon_after, coupon = (None, None)
-        if eff_price:
-            coupon_after, coupon = get_pool().best(workno, eff_price, row["site"])
+        base_for_coupon = eff_price or row["current_price"]
+        if base_for_coupon:
+            coupon_after, coupon = get_pool().best(workno, base_for_coupon, row["site"])
         c_hist = db.get_coupon_history(g.db, workno)
         c_prices = [r["coupon_price"] for r in c_hist]
         if len(c_prices) >= 7:
